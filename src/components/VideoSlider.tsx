@@ -1,21 +1,26 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import SearchBar from "@/components/SearchBar";
-import VideoCard from "@/components/VideoCard";
-import SaveModal from "@/components/SaveModal";
+import VideoCard from "./VideoCard";
+import SaveModal from "./SaveModal";
 import { searchVideos } from "@/lib/youtube";
 import type { VideoResult } from "@/lib/types";
 
-export default function SearchResults({ query }: { query: string }) {
+export default function VideoSlider({
+  areaLabel,
+  query,
+}: {
+  areaLabel: string;
+  query: string;
+}) {
   const [videos, setVideos] = useState<VideoResult[]>([]);
-  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<VideoResult | null>(null);
   const [savedMessage, setSavedMessage] = useState(false);
 
   useEffect(() => {
-    if (!query) return;
     setStatus("loading");
     searchVideos(query)
       .then((results) => {
@@ -29,8 +34,16 @@ export default function SearchResults({ query }: { query: string }) {
   }, [query]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <SearchBar initialQuery={query} />
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-stone-800">{areaLabel}のおすすめスポット</h2>
+        <Link
+          href={`/search?q=${encodeURIComponent(query)}`}
+          className="text-sm font-medium text-brand-600 hover:underline"
+        >
+          もっと見る
+        </Link>
+      </div>
 
       {savedMessage && (
         <div className="rounded-xl bg-green-50 px-4 py-2 text-sm text-green-700">
@@ -39,30 +52,22 @@ export default function SearchResults({ query }: { query: string }) {
       )}
 
       {status === "loading" && (
-        <p className="py-12 text-center text-stone-400">検索中...</p>
+        <p className="py-6 text-sm text-stone-400">読み込み中...</p>
       )}
 
       {status === "error" && (
-        <p className="py-12 text-center text-red-500">{errorMessage}</p>
+        <p className="py-6 text-sm text-red-500">{errorMessage}</p>
       )}
 
-      {status === "idle" && videos.length === 0 && query && (
-        <p className="py-12 text-center text-stone-400">
-          「{query}」に関連する動画が見つかりませんでした。
-        </p>
+      {status === "idle" && videos.length > 0 && (
+        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">
+          {videos.map((video) => (
+            <div key={video.videoId} className="w-52 flex-shrink-0 snap-start sm:w-60">
+              <VideoCard video={video} onOpen={setSelectedVideo} />
+            </div>
+          ))}
+        </div>
       )}
-
-      {!query && (
-        <p className="py-12 text-center text-stone-400">
-          エリアやジャンルを入力して検索してください。
-        </p>
-      )}
-
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {videos.map((video) => (
-          <VideoCard key={video.videoId} video={video} onOpen={setSelectedVideo} />
-        ))}
-      </div>
 
       {selectedVideo && (
         <SaveModal
@@ -74,6 +79,6 @@ export default function SearchResults({ query }: { query: string }) {
           }}
         />
       )}
-    </div>
+    </section>
   );
 }

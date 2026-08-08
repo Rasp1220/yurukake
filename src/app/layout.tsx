@@ -3,7 +3,7 @@ import NavBar from "@/components/NavBar";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "StrollSync | お出かけSNSキュレーション＆スマート案内",
+  title: "ゆるかけ | お出かけSNSキュレーション＆スマート案内",
   description:
     "SNSで見つけたお出かけスポットを集めて、マップとルートで効率よく巡ろう。",
 };

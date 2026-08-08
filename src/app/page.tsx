@@ -1,35 +1,29 @@
-import SearchBar from "@/components/SearchBar";
+import Logo from "@/components/Logo";
+import VideoSlider from "@/components/VideoSlider";
 
-const SUGGESTIONS = ["浅草 カフェ", "鎌倉 デート", "大阪 夜景", "京都 紅葉スポット"];
+const AREAS = [
+  { label: "東京", query: "東京" },
+  { label: "大阪", query: "大阪" },
+  { label: "北海道", query: "北海道" },
+];
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col items-center gap-8 py-12 text-center">
-      <div className="space-y-3">
-        <h1 className="text-3xl font-bold text-stone-800 sm:text-4xl">
+    <div className="flex flex-col gap-10 py-4">
+      <Logo className="mx-auto w-full max-w-md" />
+
+      <div className="space-y-2 text-center">
+        <h1 className="text-2xl font-bold text-stone-800 sm:text-3xl">
           行きたい場所、SNSからサクッと集めよう
         </h1>
         <p className="text-stone-500">
-          エリアやジャンルを入力すると、関連する紹介動画から気になるスポットを見つけて
-          お出かけリストに追加できます。
+          エリアの紹介動画から気になるスポットを見つけて、お出かけリストに追加できます。
         </p>
       </div>
 
-      <div className="w-full max-w-xl">
-        <SearchBar />
-      </div>
-
-      <div className="flex flex-wrap justify-center gap-2">
-        {SUGGESTIONS.map((keyword) => (
-          <a
-            key={keyword}
-            href={`/search?q=${encodeURIComponent(keyword)}`}
-            className="rounded-full border border-orange-200 bg-white px-4 py-1.5 text-sm text-stone-600 shadow-sm hover:border-brand-400 hover:text-brand-600"
-          >
-            {keyword}
-          </a>
-        ))}
-      </div>
+      {AREAS.map((area) => (
+        <VideoSlider key={area.query} areaLabel={area.label} query={area.query} />
+      ))}
     </div>
   );
 }
