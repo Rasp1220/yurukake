@@ -18,6 +18,7 @@ YouTubeの紹介動画からお出かけスポットを検索し、行きたい�
 
 - **ジャンル・エリアフィルター**：検索結果をジャンルタグで絞り込み、ホーム画面のエリアを拡大表示
 - **お出かけプラン作成**：行きたいリストのスポットを「1日目」「2日目」のように日程へ組み込み、並び替え・移動が可能（マイページ→「お出かけプランを作る」）
+- **お出かけブログ作成**：タイトル・サムネイルに加えて、テキスト（TinyMCEのWYSIWYGエディター）・画像・動画のパーツを必要な分だけ好きな順番で追加できるブログ（マイページ→「お出かけブログを作る」）
 - **おすすめ（レコメンド）**：保存スポットのジャンルや検索履歴の傾向から、ホーム画面に「あなたへのおすすめ」動画を表示
 - **SNSシェア**：行きたいリストやお出かけプランをX・LINEでシェア
 - **外部アプリへの導線**：スポットごとにGoogle Map・YouTube公式アプリへのリンクを表示
@@ -40,7 +41,7 @@ cp .env.example .env.local
 ### Supabaseプロジェクトの準備
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）
+2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`blogs`／`blog_blocks`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）。あわせて、ブログのサムネイル・画像・動画パーツのアップロード先として `blog-media` というPublicなStorageバケットとアクセスポリシーも同じスクリプトで作成されます
 3. Project Settings → API から `Project URL` と `anon public` キーを取得
 
 #### 「Could not find the table 'public.plans' in the schema cache」と出る場合
@@ -100,17 +101,21 @@ src/
     search/                # 検索結果画面（ジャンルフィルター）
     mypage/                # マイページ（保存リスト、要ログイン）
       plans/                # お出かけプラン一覧・詳細（日程スケジュール）
+      blogs/                # お出かけブログ一覧・編集（タイトル／サムネイル／パーツ）
     login/                  # ログイン画面
     signup/                 # 新規登録画面
     api/search/            # area_videosから抽出して返すだけのAPI（YouTubeは呼ばない）
     api/cron/fetch-area-videos/  # YouTube APIを呼んでarea_videosを埋めるバッチ
-  components/              # UIコンポーネント（ShareButtons, RecommendedSectionほか）
-  lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プランCRUD・レコメンドロジック
+  components/              # UIコンポーネント（ShareButtons, RecommendedSection, RichTextEditor（TinyMCE）ほか）
+  lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プラン／ブログCRUD・レコメンドロジック
     areaVideos.ts           # 動画プールの読み書き（サーバー専用）
     prefectures.ts          # 47都道府県リスト
+    blogs.ts                # ブログ／パーツのCRUDとメディアアップロード（Supabase Storage）
   middleware.ts             # Supabaseセッションのリフレッシュ
+scripts/
+  copy-tinymce.js           # `npm install`後にTinyMCEをpublic/tinymceへセルフホスト用コピー（postinstall）
 supabase/
-  schema.sql               # spots／plans／plan_items／area_videos／area_fetch_progressテーブル定義とRLSポリシー
+  schema.sql               # spots／plans／plan_items／blogs／blog_blocks／area_videos／area_fetch_progressテーブル定義とRLSポリシー、blog-media Storageバケット
 .github/workflows/
   fetch-area-videos.yml    # バッチを毎日呼び出すGitHub Actions
 ```

@@ -32,3 +32,21 @@ export interface PlanItem {
   dayNumber: number;
   sortOrder: number;
 }
+
+export interface Blog {
+  id: string;
+  title: string;
+  thumbnailUrl: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BlogBlockType = "text" | "image" | "video";
+
+export interface BlogBlock {
+  id: string;
+  blogId: string;
+  type: BlogBlockType;
+  content: string;
+  sortOrder: number;
+}

@@ -279,6 +279,108 @@ as $$
     )
 $$;
 
+-- お出かけブログ機能: ブログ本体（タイトル・サムネイル）と、本文を構成する
+-- パーツ（テキスト／画像／動画）。パーツは並び順を持ち、必要な種類だけを
+-- 好きな順番で追加できる。
+
+create table if not exists public.blogs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title text not null,
+  thumbnail_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create index if not exists blogs_user_id_idx on public.blogs (user_id);
+
+alter table public.blogs enable row level security;
+
+drop policy if exists "Users can view their own blogs" on public.blogs;
+create policy "Users can view their own blogs"
+  on public.blogs for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their own blogs" on public.blogs;
+create policy "Users can insert their own blogs"
+  on public.blogs for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own blogs" on public.blogs;
+create policy "Users can update their own blogs"
+  on public.blogs for update
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can delete their own blogs" on public.blogs;
+create policy "Users can delete their own blogs"
+  on public.blogs for delete
+  using (auth.uid() = user_id);
+
+-- type: 'text'（TinyMCEのHTML）／'image'／'video'（アップロードしたファイルのURL）。
+-- content にHTMLまたはURLをそのまま保存する（パーツの種類ごとにテーブルを
+-- 分けるほどの複雑さがないため、1テーブルにまとめている）。
+create table if not exists public.blog_blocks (
+  id uuid primary key default gen_random_uuid(),
+  blog_id uuid not null references public.blogs (id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  type text not null check (type in ('text', 'image', 'video')),
+  content text not null default '',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists blog_blocks_blog_id_idx on public.blog_blocks (blog_id);
+
+alter table public.blog_blocks enable row level security;
+
+drop policy if exists "Users can view their own blog blocks" on public.blog_blocks;
+create policy "Users can view their own blog blocks"
+  on public.blog_blocks for select
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can insert their own blog blocks" on public.blog_blocks;
+create policy "Users can insert their own blog blocks"
+  on public.blog_blocks for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own blog blocks" on public.blog_blocks;
+create policy "Users can update their own blog blocks"
+  on public.blog_blocks for update
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can delete their own blog blocks" on public.blog_blocks;
+create policy "Users can delete their own blog blocks"
+  on public.blog_blocks for delete
+  using (auth.uid() = user_id);
+
+-- ブログのサムネイル・画像パーツ・動画パーツのアップロード先。ファイルは
+-- `{auth.uid()}/...` の下に置く前提で、フォルダ名（先頭パス要素）が
+-- 自分のuser_idと一致する場合のみ読み書きできるようにする。バケット自体は
+-- public にしておき、保存後の公開URL（getPublicUrl）でそのまま表示する。
+insert into storage.buckets (id, name, public)
+values ('blog-media', 'blog-media', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Anyone can view blog media" on storage.objects;
+create policy "Anyone can view blog media"
+  on storage.objects for select
+  using (bucket_id = 'blog-media');
+
+drop policy if exists "Users can upload their own blog media" on storage.objects;
+create policy "Users can upload their own blog media"
+  on storage.objects for insert
+  with check (bucket_id = 'blog-media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can update their own blog media" on storage.objects;
+create policy "Users can update their own blog media"
+  on storage.objects for update
+  using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can delete their own blog media" on storage.objects;
+create policy "Users can delete their own blog media"
+  on storage.objects for delete
+  using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = auth.uid()::text);
+
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が
 -- 反映されるまで "Could not find the table 'public.xxx' in the schema cache" を
 -- 返し続けることがあります。最後にリロードを通知して即座に反映させます。

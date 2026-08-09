@@ -55,12 +55,20 @@ export default function MyPageContent() {
             保存したスポットを一覧で確認し、当日のしおりとして使えます。
           </p>
         </div>
-        <Link
-          href="/mypage/plans"
-          className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          お出かけプランを作る
-        </Link>
+        <div className="flex flex-shrink-0 gap-2">
+          <Link
+            href="/mypage/blogs"
+            className="rounded-full border border-brand-600 px-4 py-2 text-sm font-semibold text-brand-600 hover:bg-orange-50"
+          >
+            お出かけブログを作る
+          </Link>
+          <Link
+            href="/mypage/plans"
+            className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+          >
+            お出かけプランを作る
+          </Link>
+        </div>
       </div>
 
       {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}

@@ -26,6 +26,11 @@ export default async function NavBar() {
               プラン
             </Link>
           )}
+          {user && (
+            <Link href="/mypage/blogs" className="hover:text-brand-600">
+              ブログ
+            </Link>
+          )}
           {user ? (
             <>
               <span className="hidden text-stone-400 sm:inline">{user.email}</span>
