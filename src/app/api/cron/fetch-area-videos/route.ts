@@ -33,6 +33,9 @@ const UNITS_PER_CALL = 100;
 // クォータへの影響はごくわずか。
 const VIDEOS_LIST_UNITS_PER_CALL = 1;
 const VIEW_COUNT_BATCH_SIZE = 50;
+// description はUIには表示せず検索のあいまい一致にしか使わないため、DB容量
+// 節約のため150文字に切り詰めて保存する（トライグラムインデックスのサイズにも効く）。
+const DESCRIPTION_MAX_LENGTH = 150;
 
 // 1回の実行で使うクォータの上限。1日のクォータ10,000のうち余裕を残す。
 const UNIT_BUDGET_PER_RUN = 8000;
@@ -87,7 +90,7 @@ async function fetchPage(
       thumbnailUrl:
         item.snippet?.thumbnails?.high?.url ?? item.snippet?.thumbnails?.default?.url ?? "",
       publishedAt: item.snippet?.publishedAt ?? "",
-      description: item.snippet?.description ?? "",
+      description: (item.snippet?.description ?? "").slice(0, DESCRIPTION_MAX_LENGTH),
       // search.list には再生数が含まれないため、後段の fetchViewCounts で
       // videos.list から取得して上書きする。
       viewCount: 0,
