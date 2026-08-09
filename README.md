@@ -75,4 +75,4 @@ supabase/
 - ルート自動最適化
 - 営業中ステータスなどのリアルタイム情報
 
-詳細は `docs/` のSOW（作業範囲定義書）を参照してください。
+詳細は `docs/` のSOW（作業範囲定義書）を参照してください。追加機能の提案は [`docs/RECOMMENDED_FEATURES.md`](docs/RECOMMENDED_FEATURES.md) にまとめています。
