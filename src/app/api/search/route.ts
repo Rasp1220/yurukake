@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { searchAreaVideos } from "@/lib/areaVideos";
+import { countAreaVideos, searchAreaVideos, type AreaVideoSort } from "@/lib/areaVideos";
 
 // サイト側はYouTube APIを直接呼ばず、事前にバッチ
 // （`/api/cron/fetch-area-videos`）が貯めた `area_videos` テーブルから
@@ -20,9 +20,19 @@ export async function GET(request: NextRequest) {
     ? Math.min(Math.max(Math.trunc(requestedMaxResults), 1), 100)
     : 12;
 
+  const offsetParam = request.nextUrl.searchParams.get("offset");
+  const requestedOffset = offsetParam ? Number(offsetParam) : NaN;
+  const offset = Number.isFinite(requestedOffset) ? Math.max(Math.trunc(requestedOffset), 0) : 0;
+
+  const sortParam = request.nextUrl.searchParams.get("sort");
+  const sort: AreaVideoSort = sortParam === "view_count" ? "view_count" : "random";
+
   try {
-    const results = await searchAreaVideos(query, genre, maxResults);
-    return NextResponse.json({ results });
+    const [results, total] = await Promise.all([
+      searchAreaVideos(query, genre, maxResults, offset, sort),
+      countAreaVideos(query, genre),
+    ]);
+    return NextResponse.json({ results, total });
   } catch (error) {
     const message = error instanceof Error ? error.message : "検索に失敗しました";
     return NextResponse.json({ error: message }, { status: 502 });

@@ -5,6 +5,7 @@ export interface VideoResult {
   thumbnailUrl: string;
   publishedAt: string;
   description: string;
+  viewCount: number;
 }
 
 export interface SavedSpot {

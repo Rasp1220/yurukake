@@ -43,6 +43,7 @@ interface AreaVideoRow {
   thumbnail_url: string;
   description: string;
   published_at: string | null;
+  view_count: number;
 }
 
 function toVideoResult(row: AreaVideoRow): VideoResult {
@@ -53,8 +54,11 @@ function toVideoResult(row: AreaVideoRow): VideoResult {
     thumbnailUrl: row.thumbnail_url,
     publishedAt: row.published_at ?? "",
     description: row.description,
+    viewCount: row.view_count,
   };
 }
+
+export type AreaVideoSort = "random" | "view_count";
 
 /**
  * 都道府県名と完全一致すればその都道府県に絞り込み、一致しなければ
@@ -69,6 +73,8 @@ export async function searchAreaVideos(
   query: string,
   genre: string | null,
   maxResults: number,
+  offset = 0,
+  sortBy: AreaVideoSort = "random",
 ): Promise<VideoResult[]> {
   const supabase = getAreaVideosClient();
   if (!supabase) {
@@ -82,6 +88,8 @@ export async function searchAreaVideos(
     search_query: trimmedQuery,
     search_genre: trimmedGenre,
     result_limit: maxResults,
+    result_offset: offset,
+    sort_by: sortBy,
   });
 
   if (error) throw new Error(error.message);
@@ -98,10 +106,45 @@ export async function searchAreaVideos(
       search_query: trimmedQuery,
       search_genre: null,
       result_limit: maxResults,
+      result_offset: offset,
+      sort_by: sortBy,
     },
   );
   if (fallbackError) throw new Error(fallbackError.message);
   return ((fallbackData ?? []) as AreaVideoRow[]).map(toVideoResult);
+}
+
+/**
+ * もっと見るページのページング用の総件数。ジャンル指定で0件のときに
+ * ジャンル無しへフォールバックする挙動は `searchAreaVideos` と揃える
+ * （フォールバック後の一覧と件数の不整合を避けるため）。
+ */
+export async function countAreaVideos(
+  query: string,
+  genre: string | null,
+): Promise<number> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) {
+    throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+  }
+
+  const trimmedQuery = query.trim();
+  const trimmedGenre = genre?.trim() || null;
+
+  const { data, error } = await supabase.rpc("count_area_videos", {
+    search_query: trimmedQuery,
+    search_genre: trimmedGenre,
+  });
+  if (error) throw new Error(error.message);
+  if (typeof data === "number" && data > 0) return data;
+  if (!trimmedGenre) return typeof data === "number" ? data : 0;
+
+  const { data: fallbackData, error: fallbackError } = await supabase.rpc(
+    "count_area_videos",
+    { search_query: trimmedQuery, search_genre: null },
+  );
+  if (fallbackError) throw new Error(fallbackError.message);
+  return typeof fallbackData === "number" ? fallbackData : 0;
 }
 
 export interface FetchProgress {
@@ -110,7 +153,31 @@ export interface FetchProgress {
   videoCount: number;
 }
 
-/** 最終更新が古い順（未更新は最優先）に都道府県を並べて返す。 */
+// 初回取得（本格取得）を優先する主要都道府県。1日あたり2〜3県分しか
+// クォータの都合で処理できないため、利用者が多いであろう主要都市から
+// 先にデータを揃える。この一覧に無い県は`PREFECTURES`の並び順のまま。
+const PRIORITY_PREFECTURES: readonly Prefecture[] = [
+  "東京",
+  "大阪",
+  "愛知",
+  "神奈川",
+  "北海道",
+  "京都",
+  "福岡",
+  "沖縄",
+];
+
+function priorityRank(prefecture: Prefecture): number {
+  const index = PRIORITY_PREFECTURES.indexOf(prefecture);
+  return index === -1 ? PRIORITY_PREFECTURES.length : index;
+}
+
+/**
+ * 取得すべき順に都道府県を並べて返す。
+ * - 未取得の県：主要都道府県から先に（`PRIORITY_PREFECTURES`の順）
+ * - 取得済みの県：最終更新が古い順（新着チェックのローテーション）
+ * 未取得は常に取得済みより先に処理する。
+ */
 export async function getFetchProgressOrderedByStaleness(
   prefectures: readonly Prefecture[],
 ): Promise<FetchProgress[]> {
@@ -136,7 +203,9 @@ export async function getFetchProgressOrderedByStaleness(
       videoCount: byPrefecture.get(prefecture)?.videoCount ?? 0,
     }))
     .sort((a, b) => {
-      if (!a.lastFetchedAt && !b.lastFetchedAt) return 0;
+      if (!a.lastFetchedAt && !b.lastFetchedAt) {
+        return priorityRank(a.prefecture) - priorityRank(b.prefecture);
+      }
       if (!a.lastFetchedAt) return -1;
       if (!b.lastFetchedAt) return 1;
       return a.lastFetchedAt.localeCompare(b.lastFetchedAt);
@@ -159,6 +228,7 @@ export async function upsertAreaVideos(
       channel_title: video.channelTitle,
       thumbnail_url: video.thumbnailUrl,
       description: video.description,
+      view_count: video.viewCount,
       published_at: video.publishedAt || null,
       fetched_at: new Date().toISOString(),
     })),
