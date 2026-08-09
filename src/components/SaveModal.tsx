@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { VideoResult } from "@/lib/types";
-import { geocodeAddress } from "@/lib/geocode";
 import { addSavedSpot } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
 
@@ -32,22 +31,12 @@ export default function SaveModal({
 
     setStatus("saving");
     try {
-      const trimmedAddress = address.trim();
-      let lat: number | null = null;
-      let lng: number | null = null;
-      if (trimmedAddress) {
-        const location = await geocodeAddress(trimmedAddress);
-        lat = location.lat;
-        lng = location.lng;
-      }
       await addSavedSpot({
         videoId: video.videoId,
         videoTitle: video.title,
         thumbnailUrl: video.thumbnailUrl,
         spotName: spotName.trim() || video.title,
-        address: trimmedAddress,
-        lat,
-        lng,
+        address: address.trim(),
       });
       onSaved();
       onClose();
