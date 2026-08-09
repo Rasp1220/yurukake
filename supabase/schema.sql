@@ -292,14 +292,30 @@ create table if not exists public.blogs (
   updated_at timestamptz not null default now()
 );
 
+-- 下書き/公開の切り替え。既定は'draft'なので、作成しただけのブログが
+-- 本人の意図なく他人に見えることはない。
+alter table public.blogs add column if not exists status text not null default 'draft';
+alter table public.blogs drop constraint if exists blogs_status_check;
+alter table public.blogs add constraint blogs_status_check check (status in ('draft', 'published'));
+
 create index if not exists blogs_user_id_idx on public.blogs (user_id);
 
 alter table public.blogs enable row level security;
 
+-- 本人は下書き・公開済みどちらも見える（次の「公開済みは誰でも閲覧可」ポリシーと
+-- OR条件で組み合わされる）。
 drop policy if exists "Users can view their own blogs" on public.blogs;
 create policy "Users can view their own blogs"
   on public.blogs for select
   using (auth.uid() = user_id);
+
+-- ブロガーの公開プロフィールページ（/blogger/[userId]）・公開ブログページ
+-- （/blogs/[id]）は未ログインでも見られるようにするため、公開済み(status='published')
+-- のブログは誰でも閲覧できるようにする。
+drop policy if exists "Anyone can view published blogs" on public.blogs;
+create policy "Anyone can view published blogs"
+  on public.blogs for select
+  using (status = 'published');
 
 drop policy if exists "Users can insert their own blogs" on public.blogs;
 create policy "Users can insert their own blogs"
@@ -337,6 +353,18 @@ drop policy if exists "Users can view their own blog blocks" on public.blog_bloc
 create policy "Users can view their own blog blocks"
   on public.blog_blocks for select
   using (auth.uid() = user_id);
+
+-- 公開済みブログの本文パーツは、パーツ自体のuser_id（=著者）ではなく
+-- 閲覧者が誰であっても読めるようにする。
+drop policy if exists "Anyone can view blocks of published blogs" on public.blog_blocks;
+create policy "Anyone can view blocks of published blogs"
+  on public.blog_blocks for select
+  using (
+    exists (
+      select 1 from public.blogs b
+      where b.id = blog_blocks.blog_id and b.status = 'published'
+    )
+  );
 
 drop policy if exists "Users can insert their own blog blocks" on public.blog_blocks;
 create policy "Users can insert their own blog blocks"
@@ -380,6 +408,32 @@ drop policy if exists "Users can delete their own blog media" on storage.objects
 create policy "Users can delete their own blog media"
   on storage.objects for delete
   using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ブロガーの公開プロフィール（/blogger/[userId]）用の表示名。auth.usersの
+-- メールアドレスをそのまま公開したくないため、任意で設定できる表示名だけを
+-- 別テーブルで持つ。未設定でもプロフィールページ自体は表示できる。
+create table if not exists public.profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  display_name text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "Anyone can view profiles" on public.profiles;
+create policy "Anyone can view profiles"
+  on public.profiles for select
+  using (true);
+
+drop policy if exists "Users can insert their own profile" on public.profiles;
+create policy "Users can insert their own profile"
+  on public.profiles for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own profile" on public.profiles;
+create policy "Users can update their own profile"
+  on public.profiles for update
+  using (auth.uid() = user_id);
 
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が
 -- 反映されるまで "Could not find the table 'public.xxx' in the schema cache" を

@@ -33,10 +33,14 @@ export interface PlanItem {
   sortOrder: number;
 }
 
+export type BlogStatus = "draft" | "published";
+
 export interface Blog {
   id: string;
+  userId: string;
   title: string;
   thumbnailUrl: string | null;
+  status: BlogStatus;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,4 +53,9 @@ export interface BlogBlock {
   type: BlogBlockType;
   content: string;
   sortOrder: number;
+}
+
+export interface Profile {
+  userId: string;
+  displayName: string | null;
 }

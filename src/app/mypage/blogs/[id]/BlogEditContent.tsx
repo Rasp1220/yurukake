@@ -11,6 +11,7 @@ import {
   removeBlogBlock,
   reorderBlogBlock,
   updateBlogBlockContent,
+  updateBlogStatus,
   updateBlogThumbnail,
   updateBlogTitle,
   uploadBlogMedia,
@@ -46,6 +47,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
 
   const [textDrafts, setTextDrafts] = useState<Record<string, string>>({});
   const [busyBlockId, setBusyBlockId] = useState<string | null>(null);
+  const [savingStatus, setSavingStatus] = useState(false);
 
   async function load() {
     try {
@@ -89,6 +91,20 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
       reportError(error, "タイトルの更新に失敗しました");
     } finally {
       setSavingTitle(false);
+    }
+  }
+
+  async function handleToggleStatus() {
+    if (!blog) return;
+    const nextStatus = blog.status === "published" ? "draft" : "published";
+    setSavingStatus(true);
+    try {
+      await updateBlogStatus(blog.id, nextStatus);
+      setBlog({ ...blog, status: nextStatus });
+    } catch (error) {
+      reportError(error, "公開設定の更新に失敗しました");
+    } finally {
+      setSavingStatus(false);
     }
   }
 
@@ -210,13 +226,50 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <Link href="/mypage/blogs" className="text-xs text-stone-400 hover:text-brand-600">
-          ← ブログ一覧
+        <Link
+          href="/mypage/blogs"
+          className="inline-flex items-center gap-1 text-sm font-medium text-stone-500 hover:text-brand-600"
+        >
+          ← ブログ一覧に戻る
         </Link>
         <h1 className="text-2xl font-bold text-stone-800">{blog?.title}</h1>
       </div>
 
       {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+
+      {blog && (
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+          <div>
+            <h2 className="font-semibold text-stone-800">公開設定</h2>
+            <p className="text-xs text-stone-500">
+              {blog.status === "published"
+                ? "公開中：ブロガープロフィールから誰でも閲覧できます"
+                : "下書き：自分だけが閲覧できます"}
+            </p>
+            {blog.status === "published" && (
+              <Link
+                href={`/blogs/${blog.id}`}
+                target="_blank"
+                className="text-xs text-brand-600 hover:underline"
+              >
+                公開ページを見る ↗
+              </Link>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleStatus}
+            disabled={savingStatus}
+            className={
+              blog.status === "published"
+                ? "rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:opacity-60"
+                : "rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            }
+          >
+            {savingStatus ? "更新中..." : blog.status === "published" ? "下書きに戻す" : "公開する"}
+          </button>
+        </section>
+      )}
 
       <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
         <h2 className="mb-3 font-semibold text-stone-800">タイトル</h2>

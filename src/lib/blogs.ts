@@ -1,13 +1,15 @@
 import { createClient } from "@/lib/supabase/client";
 import { throwSupabaseError } from "@/lib/supabase/errors";
-import type { Blog, BlogBlock, BlogBlockType } from "./types";
+import type { Blog, BlogBlock, BlogBlockType, BlogStatus } from "./types";
 
 const MEDIA_BUCKET = "blog-media";
 
 interface BlogRow {
   id: string;
+  user_id: string;
   title: string;
   thumbnail_url: string | null;
+  status: BlogStatus;
   created_at: string;
   updated_at: string;
 }
@@ -23,8 +25,10 @@ interface BlogBlockRow {
 function blogFromRow(row: BlogRow): Blog {
   return {
     id: row.id,
+    userId: row.user_id,
     title: row.title,
     thumbnailUrl: row.thumbnail_url,
+    status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -94,6 +98,15 @@ export async function updateBlogThumbnail(
     .update({ thumbnail_url: thumbnailUrl, updated_at: new Date().toISOString() })
     .eq("id", blogId);
   if (error) throwSupabaseError(error, "サムネイルの更新に失敗しました");
+}
+
+export async function updateBlogStatus(blogId: string, status: BlogStatus): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase
+    .from("blogs")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", blogId);
+  if (error) throwSupabaseError(error, "公開設定の更新に失敗しました");
 }
 
 export async function deleteBlog(blogId: string): Promise<void> {
