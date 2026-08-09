@@ -14,10 +14,12 @@ create table if not exists public.spots (
 );
 
 -- This app no longer integrates with Google Maps (no geocoding, no map
--- display), so spots have no coordinates. If this table already exists
--- from an earlier version of this schema, drop the now-unused columns:
---   alter table public.spots drop column if exists lat;
---   alter table public.spots drop column if exists lng;
+-- display), so spots have no coordinates. Drop the now-unused columns if
+-- they still exist from an earlier version of this schema (they may have
+-- a not-null constraint, which would otherwise reject every new insert
+-- since the app no longer sends lat/lng).
+alter table public.spots drop column if exists lat;
+alter table public.spots drop column if exists lng;
 
 create index if not exists spots_user_id_idx on public.spots (user_id);
 
