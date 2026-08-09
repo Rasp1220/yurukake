@@ -18,8 +18,8 @@ export default async function NavBar() {
           <Link href="/search" className="hover:text-brand-600">
             さがす
           </Link>
-          <Link href="/mypage" className="hover:text-brand-600">
-            マイページ
+          <Link href={user ? "/mypage" : "/login"} className="hover:text-brand-600">
+            {user ? "マイページ" : "ログイン"}
           </Link>
           {user ? (
             <>
@@ -27,17 +27,12 @@ export default async function NavBar() {
               <LogoutButton />
             </>
           ) : (
-            <>
-              <Link href="/login" className="hover:text-brand-600">
-                ログイン
-              </Link>
-              <Link
-                href="/signup"
-                className="rounded-full bg-brand-600 px-3 py-1.5 text-white hover:bg-brand-700"
-              >
-                新規登録
-              </Link>
-            </>
+            <Link
+              href="/signup"
+              className="rounded-full bg-brand-600 px-3 py-1.5 text-white hover:bg-brand-700"
+            >
+              新規登録
+            </Link>
           )}
         </nav>
       </div>
