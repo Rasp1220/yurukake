@@ -121,6 +121,56 @@ create policy "Users can delete their own plan items"
   on public.plan_items for delete
   using (auth.uid() = user_id);
 
+-- YouTube検索結果のキャッシュ。YouTube Data API v3 は search.list 1回で
+-- 100ユニット消費し、デフォルトのクォータは1日10,000ユニット（＝1日100回）しか
+-- ないため、同じ検索条件の結果をここに貯めてAPI呼び出しを減らす。
+-- ユーザーごとのデータではなく全員で共有するサーバー側キャッシュなので、
+-- user_id は持たない。
+
+create table if not exists public.search_cache (
+  -- 「正規化した検索キーワード + 区切り文字 + ジャンル」（src/lib/searchCache.ts）
+  cache_key text primary key,
+  query text not null,
+  genre text,
+  -- 何件要求して取得した結果か。これより少ない件数のキャッシュは、
+  -- より多くを求めるリクエストには使い回せない。
+  max_results integer not null default 12,
+  results jsonb not null,
+  fetched_at timestamptz not null default now()
+);
+
+-- 古いエントリを掃除したいとき用（例:
+-- `delete from public.search_cache where fetched_at < now() - interval '30 days';`）。
+-- 同じ検索条件は upsert で上書きされるため、行数は「実際に検索された条件の種類」で頭打ちになる。
+create index if not exists search_cache_fetched_at_idx on public.search_cache (fetched_at);
+
+alter table public.search_cache enable row level security;
+
+-- キャッシュの読み書きは API Route（サーバー側）からのみ行うが、既定では
+-- anon キーで接続するためポリシーで許可しておく。
+--
+-- より厳しくしたい場合: `.env.local` に `SUPABASE_SERVICE_ROLE_KEY` を設定すると
+-- サーバーはそちらで接続し、service_role は RLS を迂回するので、下の
+-- insert / update ポリシーを削除して書き込みをサーバー限定にできる。
+--   drop policy if exists "Anyone can fill the search cache" on public.search_cache;
+--   drop policy if exists "Anyone can refresh the search cache" on public.search_cache;
+
+drop policy if exists "Anyone can read the search cache" on public.search_cache;
+create policy "Anyone can read the search cache"
+  on public.search_cache for select
+  using (true);
+
+drop policy if exists "Anyone can fill the search cache" on public.search_cache;
+create policy "Anyone can fill the search cache"
+  on public.search_cache for insert
+  with check (true);
+
+drop policy if exists "Anyone can refresh the search cache" on public.search_cache;
+create policy "Anyone can refresh the search cache"
+  on public.search_cache for update
+  using (true)
+  with check (true);
+
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が
 -- 反映されるまで "Could not find the table 'public.xxx' in the schema cache" を
 -- 返し続けることがあります。最後にリロードを通知して即座に反映させます。
