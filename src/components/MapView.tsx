@@ -12,7 +12,12 @@ const TRAVEL_MODE_LABELS: Record<TravelMode, string> = {
   TRANSIT: "公共交通機関",
 };
 
+type PlottableSpot = SavedSpot & { lat: number; lng: number };
+
 export default function MapView({ spots }: { spots: SavedSpot[] }) {
+  const plottableSpots = spots.filter(
+    (spot): spot is PlottableSpot => spot.lat != null && spot.lng != null,
+  );
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.Marker[]>([]);
@@ -61,10 +66,10 @@ export default function MapView({ spots }: { spots: SavedSpot[] }) {
     markersRef.current.forEach((marker) => marker.setMap(null));
     markersRef.current = [];
 
-    if (spots.length === 0) return;
+    if (plottableSpots.length === 0) return;
 
     const bounds = new google.maps.LatLngBounds();
-    spots.forEach((spot, index) => {
+    plottableSpots.forEach((spot, index) => {
       const marker = new google.maps.Marker({
         position: { lat: spot.lat, lng: spot.lng },
         map: mapRef.current!,
@@ -75,17 +80,17 @@ export default function MapView({ spots }: { spots: SavedSpot[] }) {
       bounds.extend(marker.getPosition()!);
     });
     mapRef.current.fitBounds(bounds);
-    if (spots.length === 1) {
+    if (plottableSpots.length === 1) {
       mapRef.current.setZoom(15);
     }
-  }, [apiReady, spots]);
+  }, [apiReady, plottableSpots]);
 
   function showRoute() {
-    if (!apiReady || spots.length < 2 || !directionsRendererRef.current) return;
+    if (!apiReady || plottableSpots.length < 2 || !directionsRendererRef.current) return;
     setRouteError("");
 
     const directionsService = new google.maps.DirectionsService();
-    const [origin, ...rest] = spots;
+    const [origin, ...rest] = plottableSpots;
     const destination = rest[rest.length - 1];
     const waypoints = rest.slice(0, -1).map((spot) => ({
       location: { lat: spot.lat, lng: spot.lng },
@@ -135,7 +140,7 @@ export default function MapView({ spots }: { spots: SavedSpot[] }) {
     <div className="space-y-3">
       <div ref={mapContainerRef} className="h-80 w-full rounded-2xl border border-orange-100 sm:h-96" />
 
-      {spots.length >= 2 && (
+      {plottableSpots.length >= 2 && (
         <div className="flex flex-wrap items-center gap-3 rounded-xl border border-orange-100 bg-white p-3">
           <div className="flex gap-1">
             {(Object.keys(TRAVEL_MODE_LABELS) as TravelMode[]).map((mode) => (

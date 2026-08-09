@@ -17,7 +17,7 @@ export default function SearchResults({ query }: { query: string }) {
   useEffect(() => {
     if (!query) return;
     setStatus("loading");
-    searchVideos(query)
+    searchVideos(query, 30)
       .then((results) => {
         setVideos(results);
         setStatus("idle");

@@ -76,7 +76,9 @@ export default function MyPageContent() {
                     <p className="text-xs font-semibold text-brand-600">
                       #{index + 1} {spot.spotName}
                     </p>
-                    <p className="line-clamp-1 text-xs text-stone-500">{spot.address}</p>
+                    <p className="line-clamp-1 text-xs text-stone-500">
+                      {spot.address || "住所未設定"}
+                    </p>
                   </div>
                   <button
                     onClick={() => handleRemove(spot.id)}

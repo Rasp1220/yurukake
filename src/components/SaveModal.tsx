@@ -29,21 +29,23 @@ export default function SaveModal({
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
-    if (!spotName.trim() || !address.trim()) {
-      setStatus("error");
-      setErrorMessage("スポット名と住所（またはエリア名）を入力してください");
-      return;
-    }
 
     setStatus("saving");
     try {
-      const { lat, lng } = await geocodeAddress(address);
+      const trimmedAddress = address.trim();
+      let lat: number | null = null;
+      let lng: number | null = null;
+      if (trimmedAddress) {
+        const location = await geocodeAddress(trimmedAddress);
+        lat = location.lat;
+        lng = location.lng;
+      }
       await addSavedSpot({
         videoId: video.videoId,
         videoTitle: video.title,
         thumbnailUrl: video.thumbnailUrl,
-        spotName: spotName.trim(),
-        address: address.trim(),
+        spotName: spotName.trim() || video.title,
+        address: trimmedAddress,
         lat,
         lng,
       });
@@ -90,19 +92,19 @@ export default function SaveModal({
         <form onSubmit={handleSave} className="space-y-3">
           <div>
             <label className="mb-1 block text-sm font-medium text-stone-700">
-              スポット名
+              スポット名（任意）
             </label>
             <input
               type="text"
               value={spotName}
               onChange={(event) => setSpotName(event.target.value)}
-              placeholder="例：〇〇カフェ"
+              placeholder="未入力の場合は動画タイトルを使用します"
               className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-stone-700">
-              住所・エリア
+              住所・エリア（任意）
             </label>
             <input
               type="text"

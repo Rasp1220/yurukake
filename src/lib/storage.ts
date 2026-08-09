@@ -8,8 +8,8 @@ interface SpotRow {
   thumbnail_url: string;
   spot_name: string;
   address: string;
-  lat: number;
-  lng: number;
+  lat: number | null;
+  lng: number | null;
   saved_at: string;
 }
 

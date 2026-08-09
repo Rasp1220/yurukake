@@ -10,10 +10,16 @@ create table if not exists public.spots (
   thumbnail_url text not null,
   spot_name text not null,
   address text not null,
-  lat double precision not null,
-  lng double precision not null,
+  lat double precision,
+  lng double precision,
   saved_at timestamptz not null default now()
 );
+
+-- lat/lng are nullable because a spot can be saved without an address
+-- (geocoding is skipped when no address is entered). If this table
+-- already exists from an earlier version of this schema, run:
+--   alter table public.spots alter column lat drop not null;
+--   alter table public.spots alter column lng drop not null;
 
 create index if not exists spots_user_id_idx on public.spots (user_id);
 
