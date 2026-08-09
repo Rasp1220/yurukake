@@ -1,0 +1,22 @@
+name: Fetch area videos
+
+on:
+  schedule:
+    # 毎日18:00 UTC（日本時間 翌3:00）に実行
+    - cron: "0 18 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call fetch-area-videos endpoint
+        run: |
+          status=$(curl -s -o response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_BASE_URL }}/api/cron/fetch-area-videos")
+          echo "HTTP status: $status"
+          cat response.json
+          if [ "$status" -ge 300 ]; then
+            exit 1
+          fi

@@ -40,7 +40,7 @@ cp .env.example .env.local
 ### Supabaseプロジェクトの準備
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`search_cache` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）
+2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）
 3. Project Settings → API から `Project URL` と `anon public` キーを取得
 
 #### 「Could not find the table 'public.plans' in the schema cache」と出る場合
@@ -57,11 +57,11 @@ SQL Editor はスクリプトを1つのトランザクションとして実行�
 
 | 変数名 | 用途 |
 | :--- | :--- |
-| `YOUTUBE_API_KEY` | YouTube Data API v3（サーバーサイドのみで使用） |
+| `YOUTUBE_API_KEY` | YouTube Data API v3（バッチ `/api/cron/fetch-area-videos` のみで使用） |
 | `NEXT_PUBLIC_SUPABASE_URL` | SupabaseプロジェクトのURL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabaseのanon publicキー |
-| `SEARCH_CACHE_TTL_SECONDS` | （任意）検索キャッシュの有効期間。未設定なら86400（24時間） |
-| `SUPABASE_SERVICE_ROLE_KEY` | （任意）検索キャッシュの書き込みをサーバー限定にしたい場合のみ |
+| `SUPABASE_SERVICE_ROLE_KEY` | （任意）動画プールの書き込みをサーバー限定にしたい場合のみ |
+| `CRON_SECRET` | バッチ用エンドポイントを呼ぶときの認証トークン（自分で生成した文字列） |
 
 開発サーバーを起動：
 
@@ -71,23 +71,22 @@ npm run dev
 
 `http://localhost:3000` にアクセスします。
 
-## 検索キャッシュ（YouTube APIクォータ対策）
+## 動画プール（YouTube APIクォータ対策）
 
-YouTube Data API v3 の `search.list` は1回で100ユニット消費し、デフォルトのクォータは1日10,000ユニット＝**1日100回**しかありません。検索画面を開くたび・ジャンルタグを切り替えるたびに呼んでいるとすぐ上限に達するため、検索結果を Supabase の `search_cache` テーブルにキャッシュしています。
+サイト側（トップページ・検索ページ）は**YouTube APIを一切呼びません**。代わりに、バッチが47都道府県ぶんの動画をあらかじめ Supabase の `area_videos` テーブルに貯めておき、検索・表示はすべてそこから抽出します。
 
-処理の流れ（`src/app/api/search/route.ts`）：
+処理の流れ：
 
-1. 「検索キーワード＋ジャンル」で `search_cache` を引き、TTL（既定24時間）以内ならDBの結果をそのまま返す（YouTube呼び出しゼロ）
-2. キャッシュが無い／古い場合だけ YouTube を呼び、結果をキャッシュに書き戻す
-3. YouTube呼び出しが失敗した場合（クォータ超過など）、期限切れのキャッシュがあればそれを返す（レスポンスに `stale: true` が付きます）
+1. `/api/cron/fetch-area-videos`（`Authorization: Bearer $CRON_SECRET` で保護）が、`area_fetch_progress` を見て最終更新が古い都道府県から順に処理する
+2. まだ十分な件数（800件）が貯まっていない都道府県は「本格取得」（総合＋8ジャンルの9パターン×最大3ページ）、既に貯まっている都道府県は「新着チェックのみ」（9パターン×1ページ）にして、1回の実行で消費するクォータの上限（8,000ユニット）内に収める
+3. 動画IDを主キーに upsert するので、同じ動画を何度取得しても行が増えることはない
+4. `.github/workflows/fetch-area-videos.yml` が毎日1回このエンドポイントを呼ぶ（GitHub Actions の Secrets に `APP_BASE_URL` と `CRON_SECRET` を設定してください。デプロイ先が変わったら `APP_BASE_URL` を更新してください）
+5. サイト側の `/api/search` は `search_area_videos` 関数（`supabase/schema.sql`）経由で `area_videos` を読むだけ。検索語が都道府県名と完全一致すればその都道府県に絞り込み、一致しなければタイトル・説明文をあいまい検索する
 
 補足：
 
-- キャッシュはユーザーごとではなく**全ユーザー共有**です。検索結果は誰が見ても同じ内容のため、`search_cache` に `user_id` はありません。
-- 30件で取得したキャッシュは、12件要求（ホーム画面のおすすめ）にも先頭12件を切り出して再利用します。逆に12件のキャッシュは30件要求には使いません。
-- キャッシュの読み書きに失敗しても検索は止まりません（YouTubeへフォールバックし、サーバーログに警告を出します）。`search_cache` テーブルを作っていない状態でもアプリはこれまで通り動きます。
-- 保存された行は同じ検索条件なら上書き（upsert）されるので、行数は「実際に検索された条件の種類」で頭打ちになります。古い行を消したい場合は `delete from public.search_cache where fetched_at < now() - interval '30 days';` を実行してください。
-- 既定ではanonキーで書き込むため、`search_cache` のポリシーは書き込みを許可しています。厳しくしたい場合は `SUPABASE_SERVICE_ROLE_KEY` を設定した上で、`supabase/schema.sql` のコメントに従って書き込みポリシーを削除してください。
+- 初回は全都道府県が空の状態から始まるため、`/api/cron/fetch-area-videos` を（`workflow_dispatch` から手動実行、または直接 `curl` で）何度か実行して埋めるまでは検索結果が少ない状態になります
+- 既定ではanonキーで書き込むため、`area_videos`／`area_fetch_progress` のポリシーは書き込みを許可しています。厳しくしたい場合は `SUPABASE_SERVICE_ROLE_KEY` を設定した上で、`supabase/schema.sql` のコメントに従って書き込みポリシーを削除してください
 
 ## ディレクトリ構成
 
@@ -100,13 +99,17 @@ src/
       plans/                # お出かけプラン一覧・詳細（日程スケジュール）
     login/                  # ログイン画面
     signup/                 # 新規登録画面
-    api/search/            # YouTube Data API プロキシ（DBキャッシュ経由）
+    api/search/            # area_videosから抽出して返すだけのAPI（YouTubeは呼ばない）
+    api/cron/fetch-area-videos/  # YouTube APIを呼んでarea_videosを埋めるバッチ
   components/              # UIコンポーネント（ShareButtons, RecommendedSectionほか）
   lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プランCRUD・レコメンドロジック
-    searchCache.ts          # YouTube検索結果のDBキャッシュ（サーバー専用）
+    areaVideos.ts           # 動画プールの読み書き（サーバー専用）
+    prefectures.ts          # 47都道府県リスト
   middleware.ts             # Supabaseセッションのリフレッシュ
 supabase/
-  schema.sql               # spots／plans／plan_items／search_cacheテーブル定義とRLSポリシー
+  schema.sql               # spots／plans／plan_items／area_videos／area_fetch_progressテーブル定義とRLSポリシー
+.github/workflows/
+  fetch-area-videos.yml    # バッチを毎日呼び出すGitHub Actions
 ```
 
 ## 今後の拡張（フェーズ2）
