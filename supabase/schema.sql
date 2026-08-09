@@ -1,4 +1,13 @@
--- Run this once in the Supabase project's SQL editor (Dashboard -> SQL Editor).
+-- Run this in the Supabase project's SQL editor (Dashboard -> SQL Editor).
+-- このスクリプトは何度実行しても安全です（冪等）。テーブル・カラム・ポリシーを
+-- 追加したあとに再実行すれば、不足しているものだけが作られます。
+--
+-- 重要: SQL Editor はスクリプト全体を1つのトランザクションで実行するため、
+-- 途中の1文でもエラーになると「それ以前の文も含めて」すべてロールバックされます。
+-- `create policy` には `if not exists` が無く、既存プロジェクトで再実行すると
+-- 「policy already exists」で失敗するため、すべてのポリシーは
+-- `drop policy if exists` -> `create policy` の順で書いています。
+
 -- Creates the `spots` table used to store each logged-in user's saved
 -- "行きたいリスト" spots, scoped to that user via Row Level Security.
 
@@ -30,14 +39,17 @@ create index if not exists spots_user_id_idx on public.spots (user_id);
 
 alter table public.spots enable row level security;
 
+drop policy if exists "Users can view their own spots" on public.spots;
 create policy "Users can view their own spots"
   on public.spots for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert their own spots" on public.spots;
 create policy "Users can insert their own spots"
   on public.spots for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can delete their own spots" on public.spots;
 create policy "Users can delete their own spots"
   on public.spots for delete
   using (auth.uid() = user_id);
@@ -55,18 +67,22 @@ create index if not exists plans_user_id_idx on public.plans (user_id);
 
 alter table public.plans enable row level security;
 
+drop policy if exists "Users can view their own plans" on public.plans;
 create policy "Users can view their own plans"
   on public.plans for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert their own plans" on public.plans;
 create policy "Users can insert their own plans"
   on public.plans for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update their own plans" on public.plans;
 create policy "Users can update their own plans"
   on public.plans for update
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete their own plans" on public.plans;
 create policy "Users can delete their own plans"
   on public.plans for delete
   using (auth.uid() = user_id);
@@ -85,18 +101,27 @@ create index if not exists plan_items_plan_id_idx on public.plan_items (plan_id)
 
 alter table public.plan_items enable row level security;
 
+drop policy if exists "Users can view their own plan items" on public.plan_items;
 create policy "Users can view their own plan items"
   on public.plan_items for select
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can insert their own plan items" on public.plan_items;
 create policy "Users can insert their own plan items"
   on public.plan_items for insert
   with check (auth.uid() = user_id);
 
+drop policy if exists "Users can update their own plan items" on public.plan_items;
 create policy "Users can update their own plan items"
   on public.plan_items for update
   using (auth.uid() = user_id);
 
+drop policy if exists "Users can delete their own plan items" on public.plan_items;
 create policy "Users can delete their own plan items"
   on public.plan_items for delete
   using (auth.uid() = user_id);
+
+-- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が
+-- 反映されるまで "Could not find the table 'public.xxx' in the schema cache" を
+-- 返し続けることがあります。最後にリロードを通知して即座に反映させます。
+notify pgrst, 'reload schema';
