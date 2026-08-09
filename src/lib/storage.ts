@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { throwSupabaseError } from "@/lib/supabase/errors";
 import type { SavedSpot } from "./types";
 
 interface SpotRow {
@@ -32,7 +33,7 @@ export async function getSavedSpots(): Promise<SavedSpot[]> {
     .select("*")
     .order("saved_at", { ascending: false });
 
-  if (error) throw new Error(error.message);
+  if (error) throwSupabaseError(error, "行きたいリストの読み込みに失敗しました");
   return (data as SpotRow[]).map(fromRow);
 }
 
@@ -53,14 +54,14 @@ export async function addSavedSpot(
     .select()
     .single();
 
-  if (error) throw new Error(error.message);
+  if (error) throwSupabaseError(error, "行きたいリストへの保存に失敗しました");
   return fromRow(data as SpotRow);
 }
 
 export async function removeSavedSpot(id: string): Promise<void> {
   const supabase = createClient();
   const { error } = await supabase.from("spots").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  if (error) throwSupabaseError(error, "スポットの削除に失敗しました");
 }
 
 export async function isVideoSaved(videoId: string): Promise<boolean> {
@@ -70,6 +71,6 @@ export async function isVideoSaved(videoId: string): Promise<boolean> {
     .select("id", { count: "exact", head: true })
     .eq("video_id", videoId);
 
-  if (error) throw new Error(error.message);
+  if (error) throwSupabaseError(error, "保存状態の確認に失敗しました");
   return (count ?? 0) > 0;
 }

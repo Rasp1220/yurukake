@@ -39,8 +39,16 @@ cp .env.example .env.local
 ### Supabaseプロジェクトの準備
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items` テーブルとRow Level Securityポリシーを作成
+2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）
 3. Project Settings → API から `Project URL` と `anon public` キーを取得
+
+#### 「Could not find the table 'public.plans' in the schema cache」と出る場合
+
+`supabase/schema.sql` がまだ適用されていない（または適用が途中で失敗した）状態です。SQL Editor でスクリプト全体をもう一度実行してください。
+
+SQL Editor はスクリプトを1つのトランザクションとして実行するため、途中の1文でもエラーになるとそれ以前の文もすべてロールバックされます。以前のバージョンのスクリプトは既存プロジェクトで再実行すると `policy ... already exists` で失敗し、後半の `plans`／`plan_items` テーブルが作られないままになっていました。現在のスクリプトはポリシーを `drop policy if exists` してから作り直すため、何度でも実行できます。
+
+スクリプト末尾の `notify pgrst, 'reload schema';` がPostgRESTのスキーマキャッシュを更新します。手動で更新したい場合は Dashboard の Settings → API から "Reload schema cache"（または数分待つ）でも反映されます。
 
 デフォルトではSupabaseのメール確認（Email Confirmation）が有効です。個人利用でメール確認をスキップしたい場合は、Authentication → Providers → Email の設定で無効にできます。
 
