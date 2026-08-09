@@ -1,7 +1,12 @@
 import type { VideoResult } from "./types";
 
-export async function searchVideos(query: string): Promise<VideoResult[]> {
-  const res = await fetch(`/api/search?q=${encodeURIComponent(query)}`);
+export async function searchVideos(
+  query: string,
+  maxResults?: number,
+): Promise<VideoResult[]> {
+  const params = new URLSearchParams({ q: query });
+  if (maxResults) params.set("maxResults", String(maxResults));
+  const res = await fetch(`/api/search?${params.toString()}`);
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error ?? "検索に失敗しました");

@@ -14,7 +14,5 @@ export interface SavedSpot {
   thumbnailUrl: string;
   spotName: string;
   address: string;
-  lat: number;
-  lng: number;
   savedAt: string;
 }

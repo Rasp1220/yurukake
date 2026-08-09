@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import MapView from "@/components/MapView";
 import { getSavedSpots, removeSavedSpot } from "@/lib/storage";
 import type { SavedSpot } from "@/lib/types";
 
@@ -42,7 +41,7 @@ export default function MyPageContent() {
       <div>
         <h1 className="text-2xl font-bold text-stone-800">マイページ</h1>
         <p className="text-sm text-stone-500">
-          保存したスポットをマップで確認し、当日のしおりとして使えます。
+          保存したスポットを一覧で確認し、当日のしおりとして使えます。
         </p>
       </div>
 
@@ -53,42 +52,40 @@ export default function MyPageContent() {
           まだ行きたいスポットが保存されていません。検索画面から追加してみましょう。
         </p>
       ) : (
-        <>
-          <MapView spots={spots} />
-
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            {spots.map((spot, index) => (
-              <div
-                key={spot.id}
-                className="flex gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
-              >
-                <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
-                  <Image
-                    src={spot.thumbnailUrl}
-                    alt={spot.videoTitle}
-                    fill
-                    sizes="96px"
-                    className="object-cover"
-                  />
-                </div>
-                <div className="flex flex-1 flex-col justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-brand-600">
-                      #{index + 1} {spot.spotName}
-                    </p>
-                    <p className="line-clamp-1 text-xs text-stone-500">{spot.address}</p>
-                  </div>
-                  <button
-                    onClick={() => handleRemove(spot.id)}
-                    className="self-start text-xs text-stone-400 hover:text-red-500"
-                  >
-                    リストから削除
-                  </button>
-                </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          {spots.map((spot, index) => (
+            <div
+              key={spot.id}
+              className="flex gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
+            >
+              <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
+                <Image
+                  src={spot.thumbnailUrl}
+                  alt={spot.videoTitle}
+                  fill
+                  sizes="96px"
+                  className="object-cover"
+                />
               </div>
-            ))}
-          </div>
-        </>
+              <div className="flex flex-1 flex-col justify-between">
+                <div>
+                  <p className="text-xs font-semibold text-brand-600">
+                    #{index + 1} {spot.spotName}
+                  </p>
+                  <p className="line-clamp-1 text-xs text-stone-500">
+                    {spot.address || "住所未設定"}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleRemove(spot.id)}
+                  className="self-start text-xs text-stone-400 hover:text-red-500"
+                >
+                  リストから削除
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
   );

@@ -17,11 +17,17 @@ export async function GET(request: NextRequest) {
     );
   }
 
+  const maxResultsParam = request.nextUrl.searchParams.get("maxResults");
+  const requestedMaxResults = maxResultsParam ? Number(maxResultsParam) : NaN;
+  const maxResults = Number.isFinite(requestedMaxResults)
+    ? Math.min(Math.max(Math.trunc(requestedMaxResults), 1), 50)
+    : 12;
+
   const url = new URL(YOUTUBE_SEARCH_URL);
   url.searchParams.set("part", "snippet");
   url.searchParams.set("q", `${query} スポット 紹介`);
   url.searchParams.set("type", "video");
-  url.searchParams.set("maxResults", "12");
+  url.searchParams.set("maxResults", String(maxResults));
   url.searchParams.set("relevanceLanguage", "ja");
   url.searchParams.set("key", apiKey);
 
