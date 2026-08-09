@@ -9,8 +9,18 @@ YouTubeの紹介動画からお出かけスポットを検索し、行きたい�
 - **ログイン機能**：メールアドレス＋パスワードでアカウント登録・ログイン（Supabase Auth）
 - **スポット・キーワード検索**：エリア名やジャンルで検索
 - **SNS動画・情報連携**：YouTube Data API v3で関連動画を一覧表示
-- **ワンタップ「行きたいリスト」追加**：気になる動画をスポット情報付きで保存（ログインユーザーごとにSupabaseデータベースへ保存）
+- **ワンタップ「行きたいリスト」追加**：気になる動画をスポット情報・ジャンル付きで保存（ログインユーザーごとにSupabaseデータベースへ保存）
 - **マイページ一覧表示**：保存したスポットを一覧で確認
+
+## 追加機能
+
+[`docs/RECOMMENDED_FEATURES.md`](docs/RECOMMENDED_FEATURES.md) の提案のうち、以下を実装済みです。
+
+- **ジャンル・エリアフィルター**：検索結果をジャンルタグで絞り込み、ホーム画面のエリアを拡大表示
+- **お出かけプラン作成**：行きたいリストのスポットを「1日目」「2日目」のように日程へ組み込み、並び替え・移動が可能（マイページ→「お出かけプランを作る」）
+- **おすすめ（レコメンド）**：保存スポットのジャンルや検索履歴の傾向から、ホーム画面に「あなたへのおすすめ」動画を表示
+- **SNSシェア**：行きたいリストやお出かけプランをX・LINEでシェア
+- **外部アプリへの導線**：スポットごとにGoogle Map・YouTube公式アプリへのリンクを表示
 
 ## 技術スタック
 
@@ -29,7 +39,7 @@ cp .env.example .env.local
 ### Supabaseプロジェクトの準備
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots` テーブルとRow Level Securityポリシーを作成
+2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items` テーブルとRow Level Securityポリシーを作成
 3. Project Settings → API から `Project URL` と `anon public` キーを取得
 
 デフォルトではSupabaseのメール確認（Email Confirmation）が有効です。個人利用でメール確認をスキップしたい場合は、Authentication → Providers → Email の設定で無効にできます。
@@ -55,17 +65,18 @@ npm run dev
 ```
 src/
   app/
-    page.tsx              # ホーム画面（検索バー）
-    search/                # 検索結果画面
+    page.tsx              # ホーム画面（検索バー、おすすめ）
+    search/                # 検索結果画面（ジャンルフィルター）
     mypage/                # マイページ（保存リスト、要ログイン）
+      plans/                # お出かけプラン一覧・詳細（日程スケジュール）
     login/                  # ログイン画面
     signup/                 # 新規登録画面
     api/search/            # YouTube Data API プロキシ
-  components/              # UIコンポーネント
-  lib/                      # 型定義・Supabaseヘルパー・APIクライアント
+  components/              # UIコンポーネント（ShareButtons, RecommendedSectionほか）
+  lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プランCRUD・レコメンドロジック
   middleware.ts             # Supabaseセッションのリフレッシュ
 supabase/
-  schema.sql               # spotsテーブル定義とRLSポリシー
+  schema.sql               # spots／plans／plan_itemsテーブル定義とRLSポリシー
 ```
 
 ## 今後の拡張（フェーズ2）

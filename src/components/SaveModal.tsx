@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { VideoResult } from "@/lib/types";
 import { addSavedSpot } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
+import { GENRES } from "@/lib/constants";
 
 export default function SaveModal({
   video,
@@ -17,6 +18,7 @@ export default function SaveModal({
 }) {
   const [spotName, setSpotName] = useState("");
   const [address, setAddress] = useState("");
+  const [genre, setGenre] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
@@ -37,6 +39,7 @@ export default function SaveModal({
         thumbnailUrl: video.thumbnailUrl,
         spotName: spotName.trim() || video.title,
         address: address.trim(),
+        genre,
       });
       onSaved();
       onClose();
@@ -102,6 +105,27 @@ export default function SaveModal({
               placeholder="例：東京都台東区浅草"
               className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-stone-700">
+              ジャンル（任意）
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {GENRES.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setGenre(genre === option ? null : option)}
+                  className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
+                    genre === option
+                      ? "border-brand-600 bg-brand-600 text-white"
+                      : "border-stone-200 text-stone-600 hover:border-brand-300"
+                  }`}
+                >
+                  {option}
+                </button>
+              ))}
+            </div>
           </div>
 
           {status === "error" && (

@@ -8,6 +8,7 @@ export async function GET(request: NextRequest) {
   if (!query) {
     return NextResponse.json({ error: "検索キーワードを入力してください" }, { status: 400 });
   }
+  const genre = request.nextUrl.searchParams.get("genre")?.trim();
 
   const apiKey = process.env.YOUTUBE_API_KEY;
   if (!apiKey) {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
 
   const url = new URL(YOUTUBE_SEARCH_URL);
   url.searchParams.set("part", "snippet");
-  url.searchParams.set("q", `${query} スポット 紹介`);
+  url.searchParams.set("q", genre ? `${query} ${genre} スポット 紹介` : `${query} スポット 紹介`);
   url.searchParams.set("type", "video");
   url.searchParams.set("maxResults", String(maxResults));
   url.searchParams.set("relevanceLanguage", "ja");

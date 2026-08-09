@@ -21,6 +21,11 @@ export default async function NavBar() {
           <Link href={user ? "/mypage" : "/login"} className="hover:text-brand-600">
             {user ? "マイページ" : "ログイン"}
           </Link>
+          {user && (
+            <Link href="/mypage/plans" className="hover:text-brand-600">
+              プラン
+            </Link>
+          )}
           {user ? (
             <>
               <span className="hidden text-stone-400 sm:inline">{user.email}</span>

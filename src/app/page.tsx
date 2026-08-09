@@ -1,11 +1,7 @@
 import Logo from "@/components/Logo";
 import VideoSlider from "@/components/VideoSlider";
-
-const AREAS = [
-  { label: "東京", query: "東京" },
-  { label: "大阪", query: "大阪" },
-  { label: "北海道", query: "北海道" },
-];
+import RecommendedSection from "@/components/RecommendedSection";
+import { AREAS } from "@/lib/constants";
 
 export default function HomePage() {
   return (
@@ -20,6 +16,8 @@ export default function HomePage() {
           エリアの紹介動画から気になるスポットを見つけて、お出かけリストに追加できます。
         </p>
       </div>
+
+      <RecommendedSection />
 
       {AREAS.map((area) => (
         <VideoSlider key={area.query} areaLabel={area.label} query={area.query} />
