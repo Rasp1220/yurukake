@@ -1,44 +1,78 @@
+import { createClient } from "@/lib/supabase/client";
 import type { SavedSpot } from "./types";
 
-const STORAGE_KEY = "strollsync:wishlist";
-
-function readAll(): SavedSpot[] {
-  if (typeof window === "undefined") return [];
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (!raw) return [];
-  try {
-    return JSON.parse(raw) as SavedSpot[];
-  } catch {
-    return [];
-  }
+interface SpotRow {
+  id: string;
+  video_id: string;
+  video_title: string;
+  thumbnail_url: string;
+  spot_name: string;
+  address: string;
+  lat: number;
+  lng: number;
+  saved_at: string;
 }
 
-function writeAll(spots: SavedSpot[]) {
-  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(spots));
-}
-
-export function getSavedSpots(): SavedSpot[] {
-  return readAll().sort(
-    (a, b) => new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime(),
-  );
-}
-
-export function addSavedSpot(spot: Omit<SavedSpot, "id" | "savedAt">): SavedSpot {
-  const newSpot: SavedSpot = {
-    ...spot,
-    id: crypto.randomUUID(),
-    savedAt: new Date().toISOString(),
+function fromRow(row: SpotRow): SavedSpot {
+  return {
+    id: row.id,
+    videoId: row.video_id,
+    videoTitle: row.video_title,
+    thumbnailUrl: row.thumbnail_url,
+    spotName: row.spot_name,
+    address: row.address,
+    lat: row.lat,
+    lng: row.lng,
+    savedAt: row.saved_at,
   };
-  const all = readAll();
-  all.push(newSpot);
-  writeAll(all);
-  return newSpot;
 }
 
-export function removeSavedSpot(id: string) {
-  writeAll(readAll().filter((spot) => spot.id !== id));
+export async function getSavedSpots(): Promise<SavedSpot[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("spots")
+    .select("*")
+    .order("saved_at", { ascending: false });
+
+  if (error) throw new Error(error.message);
+  return (data as SpotRow[]).map(fromRow);
 }
 
-export function isVideoSaved(videoId: string): boolean {
-  return readAll().some((spot) => spot.videoId === videoId);
+export async function addSavedSpot(
+  spot: Omit<SavedSpot, "id" | "savedAt">,
+): Promise<SavedSpot> {
+  const supabase = createClient();
+  const { data, error } = await supabase
+    .from("spots")
+    .insert({
+      video_id: spot.videoId,
+      video_title: spot.videoTitle,
+      thumbnail_url: spot.thumbnailUrl,
+      spot_name: spot.spotName,
+      address: spot.address,
+      lat: spot.lat,
+      lng: spot.lng,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return fromRow(data as SpotRow);
+}
+
+export async function removeSavedSpot(id: string): Promise<void> {
+  const supabase = createClient();
+  const { error } = await supabase.from("spots").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+}
+
+export async function isVideoSaved(videoId: string): Promise<boolean> {
+  const supabase = createClient();
+  const { count, error } = await supabase
+    .from("spots")
+    .select("id", { count: "exact", head: true })
+    .eq("video_id", videoId);
+
+  if (error) throw new Error(error.message);
+  return (count ?? 0) > 0;
 }

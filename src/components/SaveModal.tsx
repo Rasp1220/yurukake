@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { VideoResult } from "@/lib/types";
 import { geocodeAddress } from "@/lib/geocode";
 import { addSavedSpot } from "@/lib/storage";
+import { createClient } from "@/lib/supabase/client";
 
 export default function SaveModal({
   video,
@@ -18,6 +20,12 @@ export default function SaveModal({
   const [address, setAddress] = useState("");
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setIsLoggedIn(Boolean(data.user)));
+  }, []);
 
   async function handleSave(event: React.FormEvent) {
     event.preventDefault();
@@ -30,7 +38,7 @@ export default function SaveModal({
     setStatus("saving");
     try {
       const { lat, lng } = await geocodeAddress(address);
-      addSavedSpot({
+      await addSavedSpot({
         videoId: video.videoId,
         videoTitle: video.title,
         thumbnailUrl: video.thumbnailUrl,
@@ -68,6 +76,17 @@ export default function SaveModal({
         <h2 className="mb-1 text-base font-semibold text-stone-800">{video.title}</h2>
         <p className="mb-4 text-sm text-stone-500">{video.channelTitle}</p>
 
+        {isLoggedIn === false ? (
+          <div className="rounded-xl bg-orange-50 p-4 text-center text-sm text-stone-600">
+            <p className="mb-3">行きたいリストに追加するにはログインが必要です。</p>
+            <Link
+              href="/login"
+              className="inline-block rounded-full bg-brand-600 px-5 py-2 font-semibold text-white hover:bg-brand-700"
+            >
+              ログインする
+            </Link>
+          </div>
+        ) : (
         <form onSubmit={handleSave} className="space-y-3">
           <div>
             <label className="mb-1 block text-sm font-medium text-stone-700">
@@ -115,6 +134,7 @@ export default function SaveModal({
             </button>
           </div>
         </form>
+        )}
       </div>
     </div>
   );
