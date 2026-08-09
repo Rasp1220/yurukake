@@ -95,7 +95,10 @@ export async function searchAreaVideos(
   if (error) throw new Error(error.message);
 
   const rows = (data ?? []) as AreaVideoRow[];
-  if (rows.length > 0 || !trimmedGenre) {
+  // ジャンル込みで「1件も無い」ときだけフォールバックする。2ページ目以降が
+  // 空なのは単に最終ページを過ぎただけなので、ここでジャンル無しの結果に
+  // 差し替えると、ページを送った先に無関係な動画が現れてしまう。
+  if (rows.length > 0 || !trimmedGenre || offset > 0) {
     return rows.map(toVideoResult);
   }
 

@@ -30,7 +30,12 @@ export default function SearchResults({ query }: { query: string }) {
   useEffect(() => {
     if (!query) return;
     setStatus("loading");
-    searchVideosWithTotal(query, PAGE_SIZE, genre ?? undefined, (page - 1) * PAGE_SIZE, "view_count")
+    searchVideosWithTotal(query, {
+      maxResults: PAGE_SIZE,
+      genre: genre ?? undefined,
+      offset: (page - 1) * PAGE_SIZE,
+      sort: "view_count",
+    })
       .then(({ results, total: totalCount }) => {
         setVideos(results);
         setTotal(totalCount);

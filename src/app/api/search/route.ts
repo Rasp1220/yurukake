@@ -27,10 +27,15 @@ export async function GET(request: NextRequest) {
   const sortParam = request.nextUrl.searchParams.get("sort");
   const sort: AreaVideoSort = sortParam === "view_count" ? "view_count" : "random";
 
+  // 総件数はページング表示（もっと見るページ）だけが必要とする。トップページの
+  // エリア枠・おすすめ枠まで数えると、1回の表示でテーブル全体を走査する
+  // count クエリが枠の数だけ走ってしまうため、明示的に要求されたときだけ数える。
+  const withTotal = request.nextUrl.searchParams.get("withTotal") === "true";
+
   try {
     const [results, total] = await Promise.all([
       searchAreaVideos(query, genre, maxResults, offset, sort),
-      countAreaVideos(query, genre),
+      withTotal ? countAreaVideos(query, genre) : Promise.resolve(0),
     ]);
     return NextResponse.json({ results, total });
   } catch (error) {

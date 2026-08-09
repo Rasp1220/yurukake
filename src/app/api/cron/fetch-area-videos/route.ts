@@ -80,18 +80,22 @@ async function fetchPage(
 
   const data = await res.json();
   const items: VideoResult[] = (data.items ?? [])
-    .filter((item: any) => item.id?.videoId)
     .map((item: any) => ({
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      thumbnailUrl: item.snippet.thumbnails?.high?.url ?? item.snippet.thumbnails?.default?.url,
-      publishedAt: item.snippet.publishedAt,
-      description: item.snippet.description,
+      videoId: item.id?.videoId,
+      title: item.snippet?.title ?? "",
+      channelTitle: item.snippet?.channelTitle ?? "",
+      thumbnailUrl:
+        item.snippet?.thumbnails?.high?.url ?? item.snippet?.thumbnails?.default?.url ?? "",
+      publishedAt: item.snippet?.publishedAt ?? "",
+      description: item.snippet?.description ?? "",
       // search.list には再生数が含まれないため、後段の fetchViewCounts で
       // videos.list から取得して上書きする。
       viewCount: 0,
-    }));
+    }))
+    // サムネイルが無い動画は一覧に出しても絵が出ないうえ、`thumbnail_url` は
+    // NOT NULL なので、1件でも混ざるとその都道府県の upsert がまるごと失敗する。
+    // 表示できないものは最初から取り込まない。
+    .filter((item: VideoResult) => item.videoId && item.thumbnailUrl);
 
   return { items, nextPageToken: data.nextPageToken };
 }

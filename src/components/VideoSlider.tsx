@@ -22,7 +22,7 @@ export default function VideoSlider({
 
   useEffect(() => {
     setStatus("loading");
-    searchVideos(query, 10, undefined, undefined, "view_count")
+    searchVideos(query, 10, undefined, "view_count")
       .then((results) => {
         setVideos(results);
         setStatus("idle");
