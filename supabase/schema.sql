@@ -155,7 +155,17 @@ create table if not exists public.area_videos (
   fetched_at timestamptz not null default now()
 );
 
+-- トップページ（再生数順10件）・もっと見るページ（再生数順ページング）で
+-- 並び替えに使う再生数。`videos.list` の statistics.viewCount から取得する
+-- （search.list には含まれないため別呼び出しが必要）。取得できなかった
+-- 動画は0件として扱う。
+alter table public.area_videos add column if not exists view_count bigint not null default 0;
+
 create index if not exists area_videos_prefecture_idx on public.area_videos (prefecture);
+-- 都道府県で絞り込んだ上で再生数順に並べる（トップページ・もっと見るページ）
+-- クエリを高速化するための複合インデックス。
+create index if not exists area_videos_prefecture_view_count_idx
+  on public.area_videos (prefecture, view_count desc);
 create index if not exists area_videos_title_trgm_idx on public.area_videos using gin (title gin_trgm_ops);
 create index if not exists area_videos_description_trgm_idx on public.area_videos using gin (description gin_trgm_ops);
 
@@ -208,10 +218,17 @@ create policy "Anyone can write fetch progress"
 -- 都道府県に絞り込み、一致しなければタイトル・説明文をあいまい検索する。
 -- ジャンルが指定されていれば、それも同様にタイトル・説明文で絞り込む
 -- （AND条件）。
+--
+-- sort_by='view_count'：トップページ（再生数順10件）・もっと見るページ
+-- （再生数順50件ページング）用。それ以外（既定'random'）は従来通りの
+-- ランダム表示（自由検索・おすすめ枠）。
+-- result_offset：もっと見るページのページング用（0始まり）。
 create or replace function public.search_area_videos(
   search_query text,
   search_genre text default null,
-  result_limit integer default 12
+  result_limit integer default 12,
+  result_offset integer default 0,
+  sort_by text default 'random'
 )
 returns setof public.area_videos
 language sql
@@ -230,8 +247,36 @@ as $$
       or title ilike '%' || search_genre || '%'
       or description ilike '%' || search_genre || '%'
     )
-  order by random()
-  limit result_limit;
+  order by
+    case when sort_by = 'view_count' then view_count end desc nulls last,
+    case when sort_by = 'random' then random() end
+  limit result_limit
+  offset result_offset;
+$$;
+
+-- もっと見るページのページング（総件数からページ数を出す）に使う。
+-- search_area_videos と同じ絞り込み条件を再利用する。
+create or replace function public.count_area_videos(
+  search_query text,
+  search_genre text default null
+)
+returns integer
+language sql
+stable
+as $$
+  select count(*)::integer
+  from public.area_videos
+  where
+    (
+      prefecture = search_query
+      or title ilike '%' || search_query || '%'
+      or description ilike '%' || search_query || '%'
+    )
+    and (
+      search_genre is null
+      or title ilike '%' || search_genre || '%'
+      or description ilike '%' || search_genre || '%'
+    )
 $$;
 
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が

@@ -4,33 +4,56 @@ import { useEffect, useState } from "react";
 import SearchBar from "@/components/SearchBar";
 import VideoCard from "@/components/VideoCard";
 import SaveModal from "@/components/SaveModal";
-import { searchVideos } from "@/lib/youtube";
+import Pagination from "@/components/Pagination";
+import { searchVideosWithTotal } from "@/lib/youtube";
 import { recordSearch } from "@/lib/searchHistory";
 import { GENRES } from "@/lib/constants";
 import type { VideoResult } from "@/lib/types";
 
+const PAGE_SIZE = 50;
+
 export default function SearchResults({ query }: { query: string }) {
   const [videos, setVideos] = useState<VideoResult[]>([]);
+  const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<VideoResult | null>(null);
   const [savedMessage, setSavedMessage] = useState(false);
   const [genre, setGenre] = useState<string | null>(null);
+  const [page, setPage] = useState(1);
+
+  // 検索条件が変わったら1ページ目に戻す。
+  useEffect(() => {
+    setPage(1);
+  }, [query, genre]);
 
   useEffect(() => {
     if (!query) return;
     setStatus("loading");
-    searchVideos(query, 30, genre ?? undefined)
-      .then((results) => {
+    searchVideosWithTotal(query, {
+      maxResults: PAGE_SIZE,
+      genre: genre ?? undefined,
+      offset: (page - 1) * PAGE_SIZE,
+      sort: "view_count",
+    })
+      .then(({ results, total: totalCount }) => {
         setVideos(results);
+        setTotal(totalCount);
         setStatus("idle");
-        recordSearch(query, genre);
+        if (page === 1) recordSearch(query, genre);
       })
       .catch((error) => {
         setErrorMessage(error instanceof Error ? error.message : "検索に失敗しました");
         setStatus("error");
       });
-  }, [query, genre]);
+  }, [query, genre, page]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function handlePageChange(nextPage: number) {
+    setPage(nextPage);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -81,11 +104,20 @@ export default function SearchResults({ query }: { query: string }) {
         </p>
       )}
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-        {videos.map((video) => (
-          <VideoCard key={video.videoId} video={video} onOpen={setSelectedVideo} />
-        ))}
-      </div>
+      {status === "idle" && videos.length > 0 && (
+        // 通常ページの幅（max-w-5xl）を超えて、PCではウィンドウ幅いっぱいに
+        // 1行5件前後を並べられるよう、この一覧だけ幅の制約を外す。
+        <div className="relative left-1/2 w-screen -translate-x-1/2 px-4 lg:px-8">
+          <div className="mx-auto max-w-[1600px]">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {videos.map((video) => (
+                <VideoCard key={video.videoId} video={video} onOpen={setSelectedVideo} />
+              ))}
+            </div>
+            <Pagination page={page} totalPages={totalPages} onChange={handlePageChange} />
+          </div>
+        </div>
+      )}
 
       {selectedVideo && (
         <SaveModal

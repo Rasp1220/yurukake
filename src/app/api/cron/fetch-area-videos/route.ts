@@ -26,7 +26,13 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
+const YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos";
 const UNITS_PER_CALL = 100;
+// videos.list（統計情報取得）は1回1ユニットとsearch.listよりずっと安いので、
+// トップページ・もっと見るページの再生数順表示のために毎回呼んでも
+// クォータへの影響はごくわずか。
+const VIDEOS_LIST_UNITS_PER_CALL = 1;
+const VIEW_COUNT_BATCH_SIZE = 50;
 
 // 1回の実行で使うクォータの上限。1日のクォータ10,000のうち余裕を残す。
 const UNIT_BUDGET_PER_RUN = 8000;
@@ -74,17 +80,57 @@ async function fetchPage(
 
   const data = await res.json();
   const items: VideoResult[] = (data.items ?? [])
-    .filter((item: any) => item.id?.videoId)
     .map((item: any) => ({
-      videoId: item.id.videoId,
-      title: item.snippet.title,
-      channelTitle: item.snippet.channelTitle,
-      thumbnailUrl: item.snippet.thumbnails?.high?.url ?? item.snippet.thumbnails?.default?.url,
-      publishedAt: item.snippet.publishedAt,
-      description: item.snippet.description,
-    }));
+      videoId: item.id?.videoId,
+      title: item.snippet?.title ?? "",
+      channelTitle: item.snippet?.channelTitle ?? "",
+      thumbnailUrl:
+        item.snippet?.thumbnails?.high?.url ?? item.snippet?.thumbnails?.default?.url ?? "",
+      publishedAt: item.snippet?.publishedAt ?? "",
+      description: item.snippet?.description ?? "",
+      // search.list には再生数が含まれないため、後段の fetchViewCounts で
+      // videos.list から取得して上書きする。
+      viewCount: 0,
+    }))
+    // サムネイルが無い動画は一覧に出しても絵が出ないうえ、`thumbnail_url` は
+    // NOT NULL なので、1件でも混ざるとその都道府県の upsert がまるごと失敗する。
+    // 表示できないものは最初から取り込まない。
+    .filter((item: VideoResult) => item.videoId && item.thumbnailUrl);
 
   return { items, nextPageToken: data.nextPageToken };
+}
+
+/** videos.list（統計情報）で再生数をまとめて取得する。最大50件/回。 */
+async function fetchViewCounts(
+  videoIds: string[],
+  apiKey: string,
+): Promise<Map<string, number>> {
+  const viewCounts = new Map<string, number>();
+
+  for (let i = 0; i < videoIds.length; i += VIEW_COUNT_BATCH_SIZE) {
+    const batch = videoIds.slice(i, i + VIEW_COUNT_BATCH_SIZE);
+    const url = new URL(YOUTUBE_VIDEOS_URL);
+    url.searchParams.set("part", "statistics");
+    url.searchParams.set("id", batch.join(","));
+    url.searchParams.set("key", apiKey);
+
+    const res = await fetch(url.toString(), { cache: "no-store" });
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new YouTubeError(
+        body?.error?.message ?? "YouTube動画情報の取得に失敗しました",
+        res.status,
+      );
+    }
+
+    const data = await res.json();
+    for (const item of data.items ?? []) {
+      const count = Number(item.statistics?.viewCount ?? 0);
+      viewCounts.set(item.id, Number.isFinite(count) ? count : 0);
+    }
+  }
+
+  return viewCounts;
 }
 
 interface PrefectureRunResult {
@@ -152,6 +198,18 @@ export async function GET(request: NextRequest) {
     }
 
     if (collected.size > 0) {
+      try {
+        const viewCounts = await fetchViewCounts([...collected.keys()], apiKey);
+        unitsUsed +=
+          Math.ceil(collected.size / VIEW_COUNT_BATCH_SIZE) * VIDEOS_LIST_UNITS_PER_CALL;
+        for (const video of collected.values()) {
+          video.viewCount = viewCounts.get(video.videoId) ?? 0;
+        }
+      } catch {
+        // 再生数の取得に失敗しても動画自体（タイトル・サムネイル）の保存は
+        // 止めない。この場合 view_count は0のまま保存され、次回実行時の
+        // メンテナンス取得で再取得を試みる。
+      }
       await upsertAreaVideos(progress.prefecture, [...collected.values()]);
     }
     await recordFetchProgress(progress.prefecture);

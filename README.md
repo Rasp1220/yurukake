@@ -77,11 +77,12 @@ npm run dev
 
 処理の流れ：
 
-1. `/api/cron/fetch-area-videos`（`Authorization: Bearer $CRON_SECRET` で保護）が、`area_fetch_progress` を見て最終更新が古い都道府県から順に処理する
-2. まだ一度も取得していない都道府県は「本格取得」（総合＋8ジャンルの9パターン×最大3ページ）、既に一度取得済みの都道府県は「新着チェックのみ」（9パターン×1ページ）にして、1回の実行で消費するクォータの上限（8,000ユニット）内に収める
-3. 動画IDを主キーに upsert するので、同じ動画を何度取得しても行が増えることはない
-4. `.github/workflows/fetch-area-videos.yml` が毎日1回このエンドポイントを呼ぶ（GitHub Actions の Secrets に `APP_BASE_URL` と `CRON_SECRET` を設定してください。デプロイ先が変わったら `APP_BASE_URL` を更新してください）
-5. サイト側の `/api/search` は `search_area_videos` 関数（`supabase/schema.sql`）経由で `area_videos` を読むだけ。検索語が都道府県名と完全一致すればその都道府県に絞り込み、一致しなければタイトル・説明文をあいまい検索する
+1. `/api/cron/fetch-area-videos`（`Authorization: Bearer $CRON_SECRET` で保護）が、都道府県を「未取得の主要都道府県（東京・大阪・愛知・神奈川・北海道・京都・福岡・沖縄を優先）→ 未取得のその他 → 取得済み（最終更新が古い順）」の順で処理する
+2. まだ一度も取得していない都道府県は「本格取得」（総合＋8ジャンルの9パターン×最大3ページ）、既に一度取得済みの都道府県は「新着チェックのみ」（9パターン×1ページ）にして、1回の実行で消費するクォータの上限（8,000ユニット）内に収める。クォータの都合上、1日に処理できるのはおおむね2〜3都道府県分
+3. 各動画の再生数は `videos.list`（1ユニット/回・最大50件バッチ）でまとめて取得し、`view_count` として保存する（トップページ・検索結果ページの並び替えに使う）
+4. 動画IDを主キーに upsert するので、同じ動画を何度取得しても行が増えることはない
+5. `.github/workflows/fetch-area-videos.yml` が毎日1回このエンドポイントを呼ぶ（GitHub Actions の Secrets に `APP_BASE_URL` と `CRON_SECRET` を設定してください。デプロイ先が変わったら `APP_BASE_URL` を更新してください）
+6. サイト側の `/api/search` は `search_area_videos` 関数（`supabase/schema.sql`）経由で `area_videos` を読むだけ。検索語が都道府県名と完全一致すればその都道府県に絞り込み、一致しなければタイトル・説明文をあいまい検索する。トップページのエリア枠は `sort=view_count` で再生数順10件、検索結果ページ（もっと見る）は同じく再生数順で1ページ50件のページング表示
 
 **47都道府県すべてが一度取得済みになると、以降の毎日の自動実行はYouTubeを一切呼ばずに即終了します**（レスポンスは `{ "skipped": true }`）。ワークフロー自体は無効化されないので、更新したくなったら GitHub の Actions タブ → "Fetch area videos" → "Run workflow" から手動実行してください（このときだけ `force=true` が付き、実際に取得し直します）。
 
