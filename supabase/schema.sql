@@ -169,6 +169,15 @@ create index if not exists area_videos_prefecture_view_count_idx
 create index if not exists area_videos_title_trgm_idx on public.area_videos using gin (title gin_trgm_ops);
 create index if not exists area_videos_description_trgm_idx on public.area_videos using gin (description gin_trgm_ops);
 
+-- description はUIに表示せず検索のあいまい一致にしか使わないため、DB容量節約の
+-- ため150文字に切り詰めて保存する運用にした。バッチ（fetch-area-videos）は
+-- 新規取得分をすでに150文字以内に切り詰めて保存するが、それ以前に保存済みの
+-- 行は長いままなので、ここで一括で切り詰める。150文字以内の行には影響しない
+-- ため、このスクリプトを何度実行しても安全（冪等）。
+update public.area_videos
+set description = left(description, 150)
+where length(description) > 150;
+
 alter table public.area_videos enable row level security;
 
 drop policy if exists "Anyone can read area videos" on public.area_videos;
