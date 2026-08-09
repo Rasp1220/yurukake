@@ -11,10 +11,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Call fetch-area-videos endpoint
+        env:
+          # 手動実行（Run workflow）のときだけ force=true を付ける。
+          # 47都道府県すべて取得済みだと、force無し（毎日の自動実行）は
+          # YouTubeを呼ばず即終了するので、手動実行だけが実際に更新できる。
+          FORCE_PARAM: ${{ github.event_name == 'workflow_dispatch' && '?force=true' || '' }}
         run: |
           status=$(curl -s -o response.json -w "%{http_code}" \
             -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_BASE_URL }}/api/cron/fetch-area-videos")
+            "${{ secrets.APP_BASE_URL }}/api/cron/fetch-area-videos${FORCE_PARAM}")
           echo "HTTP status: $status"
           cat response.json
           if [ "$status" -ge 300 ]; then

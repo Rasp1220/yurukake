@@ -12,10 +12,15 @@ import type { VideoResult } from "@/lib/types";
  * `area_videos` テーブルを埋める唯一の入り口。YouTube APIを呼ぶのはこの
  * ルートだけで、サイト側のリクエスト（/api/search）は一切YouTubeを呼ばない。
  *
- * GitHub Actions などの外部スケジューラから `Authorization: Bearer
- * ${CRON_SECRET}` 付きで定期的に（1日1回を想定）叩く。1回の実行で使う
- * クォータの上限を決めておき、最終更新が古い都道府県から順に処理する
- * ことで、47都道府県を自然にローテーションしながら埋めていく。
+ * GitHub Actions の毎日のスケジュール実行からは `Authorization: Bearer
+ * ${CRON_SECRET}` 付きで（`force` 無しで）叩かれる。47都道府県すべてが
+ * 一度「本格取得」を終えていれば、スケジュール実行はYouTubeを一切呼ばず
+ * 即終了する（＝実質「止まっている」状態。GitHub Actions自体は無効化
+ * しないので、いつでも手動実行で更新を再開できる）。
+ *
+ * 手動で更新したいときは、GitHub Actionsの "Run workflow"（workflow_dispatch）
+ * から実行する。この場合はワークフロー側が `?force=true` を付けて呼ぶため、
+ * 完了済みでもスキップせずに実際に取得し直す。
  */
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -25,9 +30,10 @@ const UNITS_PER_CALL = 100;
 
 // 1回の実行で使うクォータの上限。1日のクォータ10,000のうち余裕を残す。
 const UNIT_BUDGET_PER_RUN = 8000;
-// この件数に達していない都道府県は「本格取得」（複数キーワード×複数ページ）、
-// 達している都道府県は「新着チェックのみ」（1ページだけ）にする。
-const TARGET_VIDEO_COUNT = 800;
+// 一度も本格取得していない都道府県は「本格取得」（複数キーワード×複数ページ）、
+// 既に一度取得済みの都道府県は「新着チェックのみ」（1ページだけ）にする。
+// 件数ではなく「取得済みかどうか」で判定することで、動画が少ない県が
+// 目標件数に届かず永遠に本格取得を繰り返す事態を避ける。
 const PAGES_FULL = 3;
 const PAGES_MAINTENANCE = 1;
 // ""=総合クエリ、それ以外はジャンルを混ぜたクエリ。
@@ -103,14 +109,25 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "サーバーにYOUTUBE_API_KEYが設定されていません" }, { status: 500 });
   }
 
+  const force = request.nextUrl.searchParams.get("force") === "true";
+
   const ordered = await getFetchProgressOrderedByStaleness(PREFECTURES);
+
+  const allFetchedAtLeastOnce = ordered.every((p) => p.lastFetchedAt !== null);
+  if (!force && allFetchedAtLeastOnce) {
+    return NextResponse.json({
+      skipped: true,
+      reason:
+        "47都道府県すべて取得済みのため、今回は何もしませんでした（YouTube呼び出しゼロ）。手動で更新したい場合はGitHub Actionsの「Run workflow」から実行してください。",
+    });
+  }
 
   const results: PrefectureRunResult[] = [];
   let unitsUsed = 0;
   let stoppedEarlyReason: string | null = null;
 
   outer: for (const progress of ordered) {
-    const mode: "full" | "maintenance" = progress.videoCount < TARGET_VIDEO_COUNT ? "full" : "maintenance";
+    const mode: "full" | "maintenance" = progress.lastFetchedAt === null ? "full" : "maintenance";
     const pages = mode === "full" ? PAGES_FULL : PAGES_MAINTENANCE;
     const estimatedCost = QUERY_VARIANTS.length * pages * UNITS_PER_CALL;
 
@@ -147,9 +164,15 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  const processedThisRun = new Set(results.map((r) => r.prefecture));
+  const allComplete = ordered.every(
+    (p) => p.lastFetchedAt !== null || processedThisRun.has(p.prefecture),
+  );
+
   return NextResponse.json({
     processed: results,
     totalUnitsUsed: unitsUsed,
     stoppedEarlyReason,
+    allComplete,
   });
 }
