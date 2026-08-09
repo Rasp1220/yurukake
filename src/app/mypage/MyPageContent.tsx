@@ -2,13 +2,17 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { getSavedSpots, removeSavedSpot } from "@/lib/storage";
+import { googleMapsUrl, youtubeWatchUrl } from "@/lib/links";
+import ShareButtons from "@/components/ShareButtons";
 import type { SavedSpot } from "@/lib/types";
 
 export default function MyPageContent() {
   const [spots, setSpots] = useState<SavedSpot[]>([]);
   const [status, setStatus] = useState<"loading" | "idle" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
+  const [origin, setOrigin] = useState("");
 
   async function loadSpots() {
     try {
@@ -22,6 +26,7 @@ export default function MyPageContent() {
 
   useEffect(() => {
     loadSpots();
+    setOrigin(window.location.origin);
   }, []);
 
   async function handleRemove(id: string) {
@@ -36,13 +41,26 @@ export default function MyPageContent() {
 
   if (status === "loading") return null;
 
+  const shareText =
+    spots.length > 0
+      ? `行きたいリスト：${spots.map((spot) => spot.spotName).join("、")}`
+      : "";
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-800">マイページ</h1>
-        <p className="text-sm text-stone-500">
-          保存したスポットを一覧で確認し、当日のしおりとして使えます。
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-stone-800">マイページ</h1>
+          <p className="text-sm text-stone-500">
+            保存したスポットを一覧で確認し、当日のしおりとして使えます。
+          </p>
+        </div>
+        <Link
+          href="/mypage/plans"
+          className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
+        >
+          お出かけプランを作る
+        </Link>
       </div>
 
       {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
@@ -52,40 +70,66 @@ export default function MyPageContent() {
           まだ行きたいスポットが保存されていません。検索画面から追加してみましょう。
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {spots.map((spot, index) => (
-            <div
-              key={spot.id}
-              className="flex gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
-            >
-              <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
-                <Image
-                  src={spot.thumbnailUrl}
-                  alt={spot.videoTitle}
-                  fill
-                  sizes="96px"
-                  className="object-cover"
-                />
-              </div>
-              <div className="flex flex-1 flex-col justify-between">
-                <div>
-                  <p className="text-xs font-semibold text-brand-600">
-                    #{index + 1} {spot.spotName}
-                  </p>
-                  <p className="line-clamp-1 text-xs text-stone-500">
-                    {spot.address || "住所未設定"}
-                  </p>
+        <>
+          {origin && <ShareButtons text={shareText} url={origin} />}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {spots.map((spot, index) => (
+              <div
+                key={spot.id}
+                className="flex gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
+              >
+                <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
+                  <Image
+                    src={spot.thumbnailUrl}
+                    alt={spot.videoTitle}
+                    fill
+                    sizes="96px"
+                    className="object-cover"
+                  />
                 </div>
-                <button
-                  onClick={() => handleRemove(spot.id)}
-                  className="self-start text-xs text-stone-400 hover:text-red-500"
-                >
-                  リストから削除
-                </button>
+                <div className="flex flex-1 flex-col justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-brand-600">
+                      #{index + 1} {spot.spotName}
+                      {spot.genre && (
+                        <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
+                          {spot.genre}
+                        </span>
+                      )}
+                    </p>
+                    <p className="line-clamp-1 text-xs text-stone-500">
+                      {spot.address || "住所未設定"}
+                    </p>
+                    <div className="mt-1 flex flex-wrap gap-2 text-xs">
+                      <a
+                        href={googleMapsUrl(spot.address || spot.spotName)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-600 hover:underline"
+                      >
+                        Google Mapで開く
+                      </a>
+                      <a
+                        href={youtubeWatchUrl(spot.videoId)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-brand-600 hover:underline"
+                      >
+                        YouTubeで見る
+                      </a>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => handleRemove(spot.id)}
+                    className="self-start text-xs text-stone-400 hover:text-red-500"
+                  >
+                    リストから削除
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

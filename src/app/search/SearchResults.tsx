@@ -5,6 +5,8 @@ import SearchBar from "@/components/SearchBar";
 import VideoCard from "@/components/VideoCard";
 import SaveModal from "@/components/SaveModal";
 import { searchVideos } from "@/lib/youtube";
+import { recordSearch } from "@/lib/searchHistory";
+import { GENRES } from "@/lib/constants";
 import type { VideoResult } from "@/lib/types";
 
 export default function SearchResults({ query }: { query: string }) {
@@ -13,24 +15,45 @@ export default function SearchResults({ query }: { query: string }) {
   const [errorMessage, setErrorMessage] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<VideoResult | null>(null);
   const [savedMessage, setSavedMessage] = useState(false);
+  const [genre, setGenre] = useState<string | null>(null);
 
   useEffect(() => {
     if (!query) return;
     setStatus("loading");
-    searchVideos(query, 30)
+    searchVideos(query, 30, genre ?? undefined)
       .then((results) => {
         setVideos(results);
         setStatus("idle");
+        recordSearch(query, genre);
       })
       .catch((error) => {
         setErrorMessage(error instanceof Error ? error.message : "検索に失敗しました");
         setStatus("error");
       });
-  }, [query]);
+  }, [query, genre]);
 
   return (
     <div className="flex flex-col gap-6">
       <SearchBar initialQuery={query} />
+
+      {query && (
+        <div className="flex flex-wrap gap-2">
+          {GENRES.map((option) => (
+            <button
+              key={option}
+              type="button"
+              onClick={() => setGenre(genre === option ? null : option)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                genre === option
+                  ? "border-brand-600 bg-brand-600 text-white"
+                  : "border-orange-200 text-stone-600 hover:border-brand-300"
+              }`}
+            >
+              {option}
+            </button>
+          ))}
+        </div>
+      )}
 
       {savedMessage && (
         <div className="rounded-xl bg-green-50 px-4 py-2 text-sm text-green-700">

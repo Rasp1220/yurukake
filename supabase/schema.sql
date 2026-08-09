@@ -10,8 +10,13 @@ create table if not exists public.spots (
   thumbnail_url text not null,
   spot_name text not null,
   address text not null,
+  genre text,
   saved_at timestamptz not null default now()
 );
+
+-- Genre tag for the filter/recommendation features. Nullable because
+-- spots saved before this column existed have no genre.
+alter table public.spots add column if not exists genre text;
 
 -- This app no longer integrates with Google Maps (no geocoding, no map
 -- display), so spots have no coordinates. Drop the now-unused columns if
@@ -35,4 +40,63 @@ create policy "Users can insert their own spots"
 
 create policy "Users can delete their own spots"
   on public.spots for delete
+  using (auth.uid() = user_id);
+
+-- お出かけプラン（しおり）機能: プラン本体と、プランに紐づく日程ごとのスポット。
+
+create table if not exists public.plans (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists plans_user_id_idx on public.plans (user_id);
+
+alter table public.plans enable row level security;
+
+create policy "Users can view their own plans"
+  on public.plans for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own plans"
+  on public.plans for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own plans"
+  on public.plans for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own plans"
+  on public.plans for delete
+  using (auth.uid() = user_id);
+
+create table if not exists public.plan_items (
+  id uuid primary key default gen_random_uuid(),
+  plan_id uuid not null references public.plans (id) on delete cascade,
+  spot_id uuid not null references public.spots (id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  day_number integer not null default 1,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists plan_items_plan_id_idx on public.plan_items (plan_id);
+
+alter table public.plan_items enable row level security;
+
+create policy "Users can view their own plan items"
+  on public.plan_items for select
+  using (auth.uid() = user_id);
+
+create policy "Users can insert their own plan items"
+  on public.plan_items for insert
+  with check (auth.uid() = user_id);
+
+create policy "Users can update their own plan items"
+  on public.plan_items for update
+  using (auth.uid() = user_id);
+
+create policy "Users can delete their own plan items"
+  on public.plan_items for delete
   using (auth.uid() = user_id);

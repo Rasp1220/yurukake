@@ -14,5 +14,20 @@ export interface SavedSpot {
   thumbnailUrl: string;
   spotName: string;
   address: string;
+  genre: string | null;
   savedAt: string;
+}
+
+export interface Plan {
+  id: string;
+  title: string;
+  createdAt: string;
+}
+
+export interface PlanItem {
+  id: string;
+  planId: string;
+  spotId: string;
+  dayNumber: number;
+  sortOrder: number;
 }

@@ -8,6 +8,7 @@ interface SpotRow {
   thumbnail_url: string;
   spot_name: string;
   address: string;
+  genre: string | null;
   saved_at: string;
 }
 
@@ -19,6 +20,7 @@ function fromRow(row: SpotRow): SavedSpot {
     thumbnailUrl: row.thumbnail_url,
     spotName: row.spot_name,
     address: row.address,
+    genre: row.genre,
     savedAt: row.saved_at,
   };
 }
@@ -46,6 +48,7 @@ export async function addSavedSpot(
       thumbnail_url: spot.thumbnailUrl,
       spot_name: spot.spotName,
       address: spot.address,
+      genre: spot.genre,
     })
     .select()
     .single();

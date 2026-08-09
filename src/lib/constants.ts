@@ -1,0 +1,21 @@
+export const AREAS = [
+  { label: "東京", query: "東京" },
+  { label: "大阪", query: "大阪" },
+  { label: "北海道", query: "北海道" },
+  { label: "京都", query: "京都" },
+  { label: "福岡", query: "福岡" },
+  { label: "沖縄", query: "沖縄" },
+  { label: "名古屋", query: "名古屋" },
+  { label: "横浜", query: "横浜" },
+];
+
+export const GENRES = [
+  "カフェ",
+  "グルメ",
+  "絶景",
+  "子連れ",
+  "デート",
+  "観光",
+  "アウトドア",
+  "夜景",
+];
