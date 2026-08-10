@@ -240,6 +240,71 @@ export async function upsertAreaVideos(
   if (error) throw new Error(error.message);
 }
 
+export interface StoredAreaVideo {
+  videoId: string;
+  prefecture: string;
+  title: string;
+  description: string;
+}
+
+/**
+ * 保存済みの動画を `video_id` 順に1ページぶん読む（`/api/cron/cleanup-area-videos`
+ * の点検用）。並び順を主キーで固定しているので、ページを送っても行が重複
+ * したり抜けたりしない。
+ */
+export async function listAreaVideoPage(
+  offset: number,
+  limit: number,
+): Promise<StoredAreaVideo[]> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("video_id, prefecture, title, description")
+    .order("video_id", { ascending: true })
+    .range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => ({
+    videoId: row.video_id as string,
+    prefecture: row.prefecture as string,
+    title: row.title as string,
+    description: (row.description as string) ?? "",
+  }));
+}
+
+export async function deleteAreaVideos(videoIds: string[]): Promise<void> {
+  if (videoIds.length === 0) return;
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { error } = await supabase.from(TABLE).delete().in("video_id", videoIds);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * `area_fetch_progress.video_count` を数え直す。点検で行を削除したあとに使う。
+ * `recordFetchProgress` と違い `last_fetched_at` は触らない（点検は取得では
+ * ないので、取得ローテーションの順番を狂わせないため）。
+ */
+export async function refreshVideoCount(prefecture: string): Promise<void> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { count, error: countError } = await supabase
+    .from(TABLE)
+    .select("video_id", { count: "exact", head: true })
+    .eq("prefecture", prefecture);
+  if (countError) throw new Error(countError.message);
+
+  const { error } = await supabase
+    .from("area_fetch_progress")
+    .update({ video_count: count ?? 0 })
+    .eq("prefecture", prefecture);
+  if (error) throw new Error(error.message);
+}
+
 export async function recordFetchProgress(prefecture: Prefecture): Promise<void> {
   const supabase = getAreaVideosClient();
   if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");

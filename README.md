@@ -85,15 +85,17 @@ npm run dev
 2. まだ一度も取得していない都道府県は「本格取得」（総合＋8ジャンルの9パターン×最大3ページ）、既に一度取得済みの都道府県は「新着チェックのみ」（9パターン×1ページ）にして、1回の実行で消費するクォータの上限（8,000ユニット）内に収める。クォータの都合上、1日に処理できるのはおおむね2〜3都道府県分
 3. 各動画の再生数は `videos.list`（1ユニット/回・最大50件バッチ）でまとめて取得し、`view_count` として保存する（トップページ・検索結果ページの並び替えに使う）
 4. YouTube検索は都道府県名・ジャンル語に緩くマッチした動画も返してくるため、タイトル・説明文が `SPOT_RELEVANCE_KEYWORDS`（`src/lib/constants.ts`。「お出かけ」「旅行」「観光」「スポット」など）のいずれも含まない動画は無関係とみなして取り込み対象から除外する
-5. 動画IDを主キーに upsert するので、同じ動画を何度取得しても行が増えることはない
-6. `.github/workflows/fetch-area-videos.yml` が毎日1回このエンドポイントを呼ぶ（GitHub Actions の Secrets に `APP_BASE_URL` と `CRON_SECRET` を設定してください。デプロイ先が変わったら `APP_BASE_URL` を更新してください）
-7. サイト側の `/api/search` は `search_area_videos` 関数（`supabase/schema.sql`）経由で `area_videos` を読むだけ。検索語が都道府県名と完全一致すればその都道府県に絞り込み、一致しなければタイトル・説明文をあいまい検索する。トップページのエリア枠は `sort=view_count` で再生数順10件、検索結果ページ（もっと見る）は同じく再生数順で1ページ50件のページング表示
+5. **さらに「本当にその都道府県の動画か」も確認する**（`belongsToPrefecture`／`src/lib/areaRelevance.ts`）。例えば `北海道 グルメ スポット 紹介` の検索結果には「愛知で開催される北海道グルメイベント」「大須にできた北海道の人気クレープ店」のような“よその県の話”が混ざるため、タイトル（タイトルがどのエリアにも触れていなければ説明文）が名指ししているエリアがちょうど1つで、それが検索中の都道府県のときだけ取り込む。判定には県名だけでなく主要都市・エリア名（`PREFECTURE_ALIASES`／`src/lib/prefectures.ts`。「札幌」「梅田」「祇園」など）も使うので、県名を出さないタイトルも拾える
+6. 動画IDを主キーに upsert するので、同じ動画を何度取得しても行が増えることはない
+7. `.github/workflows/fetch-area-videos.yml` が毎日1回このエンドポイントを呼ぶ（GitHub Actions の Secrets に `APP_BASE_URL` と `CRON_SECRET` を設定してください。デプロイ先が変わったら `APP_BASE_URL` を更新してください）
+8. サイト側の `/api/search` は `search_area_videos` 関数（`supabase/schema.sql`）経由で `area_videos` を読むだけ。検索語が都道府県名ならその都道府県の行だけに絞り込み（0件なら0件のまま返し、トップページ側はその枠ごと表示しない）、都道府県名以外の自由なキーワードのときだけタイトル・説明文をあいまい検索する。トップページのエリア枠は `sort=view_count` で再生数順10件、検索結果ページ（もっと見る）は同じく再生数順で1ページ50件のページング表示
 
 **47都道府県すべてが一度取得済みになると、以降の毎日の自動実行はYouTubeを一切呼ばずに即終了します**（レスポンスは `{ "skipped": true }`）。ワークフロー自体は無効化されないので、更新したくなったら GitHub の Actions タブ → "Fetch area videos" → "Run workflow" から手動実行してください（このときだけ `force=true` が付き、実際に取得し直します）。
 
 補足：
 
 - 初回は全都道府県が空の状態から始まるため、`/api/cron/fetch-area-videos` を（`workflow_dispatch` から手動実行、または直接 `curl` で）何度か実行して埋めるまでは検索結果が少ない状態になります
+- 上記5の都道府県チェックは**これから取り込む動画にしか効きません**。それ以前に貯めた行（「北海道のおすすめスポット」に並んでいた愛知・大阪の動画など）を消すには、Actions タブ → "Cleanup area videos" → "Run workflow" から `/api/cron/cleanup-area-videos` を実行してください。バッチと同じ判定ロジックで保存済みの行を点検し、その都道府県の動画ではない行を削除します（YouTube APIは呼ばないのでクォータを消費しません）。既定は**点検のみのドライラン**で、何が消えるかを件数と例で返します。実際に削除するには `apply` にチェックを入れて実行（直接叩く場合は `?apply=true`）。削除で件数が減った都道府県は、"Fetch area videos" の手動実行（`force=true`）で取得し直せます
 - 既定ではanonキーで書き込むため、`area_videos`／`area_fetch_progress` のポリシーは書き込みを許可しています。厳しくしたい場合は `SUPABASE_SERVICE_ROLE_KEY` を設定した上で、`supabase/schema.sql` のコメントに従って書き込みポリシーを削除してください
 
 ## ディレクトリ構成
@@ -117,10 +119,12 @@ src/
     api/search/            # area_videosから抽出して返すだけのAPI（YouTubeは呼ばない）
     api/search/blogs/      # 公開ブログをタイトル検索して返すAPI
     api/cron/fetch-area-videos/  # YouTube APIを呼んでarea_videosを埋めるバッチ
+    api/cron/cleanup-area-videos/ # 保存済みarea_videosを点検し、その都道府県の動画ではない行を消すバッチ（YouTubeは呼ばない）
   components/              # UIコンポーネント（ShareButtons, RecommendedSection, RichTextEditor（TinyMCE）, SnsIcon, BlogCard, BlogResultCard, HamburgerMenuほか）
   lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プラン／ブログCRUD・レコメンドロジック
     areaVideos.ts           # 動画プールの読み書き（サーバー専用）
-    prefectures.ts          # 47都道府県リスト
+    prefectures.ts          # 47都道府県リストと、都道府県ごとの主要都市・エリア名（PREFECTURE_ALIASES）
+    areaRelevance.ts        # 取り込んだ動画が本当にその都道府県の動画かの判定（バッチと点検バッチで共用）
     constants.ts             # AREAS／GENRES／PROFILE_TAGSなどの固定候補リスト
     blogs.ts                # ブログ／パーツのCRUD（本人用）とメディアアップロード（Supabase Storage）
     publicBlogs.ts          # 公開ブログ／プロフィール／ブログ検索の読み取り専用フェッチ（サーバー専用、未ログインでも動作）
@@ -135,6 +139,7 @@ supabase/
   schema.sql               # spots／plans／plan_items／blogs／blog_blocks／profiles／area_videos／area_fetch_progressテーブル定義とRLSポリシー、blog-media Storageバケット
 .github/workflows/
   fetch-area-videos.yml    # バッチを毎日呼び出すGitHub Actions
+  cleanup-area-videos.yml  # 点検バッチを手動実行するGitHub Actions（既定はドライラン）
 ```
 
 ## 今後の拡張（フェーズ2）

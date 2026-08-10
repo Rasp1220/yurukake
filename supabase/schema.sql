@@ -201,6 +201,14 @@ create policy "Anyone can refresh area videos"
   using (true)
   with check (true);
 
+-- 点検バッチ（/api/cron/cleanup-area-videos）が「その都道府県の動画ではない」
+-- 行を消せるようにする。書き込み系の他のポリシーと同じく、既定のanonキーでの
+-- 接続を前提に許可している。
+drop policy if exists "Anyone can prune area videos" on public.area_videos;
+create policy "Anyone can prune area videos"
+  on public.area_videos for delete
+  using (true);
+
 -- バッチが「どの都道府県を次に処理すべきか」を判断するための進捗表。
 -- 最終更新が一番古い都道府県から優先的に処理することで、日々のクォータ内で
 -- 47都道府県を自然にローテーションできる。
@@ -224,14 +232,39 @@ create policy "Anyone can write fetch progress"
   using (true)
   with check (true);
 
+-- 検索語が47都道府県のいずれかかどうか。`search_area_videos` /
+-- `count_area_videos` が「都道府県で絞り込む」か「タイトル・説明文の
+-- あいまい検索にする」かを決めるのに使う。
+create or replace function public.is_prefecture_name(candidate text)
+returns boolean
+language sql
+immutable
+as $$
+  select candidate = any (array[
+    '北海道','青森','岩手','宮城','秋田','山形','福島',
+    '茨城','栃木','群馬','埼玉','千葉','東京','神奈川',
+    '新潟','富山','石川','福井','山梨','長野','岐阜','静岡','愛知',
+    '三重','滋賀','京都','大阪','兵庫','奈良','和歌山',
+    '鳥取','島根','岡山','広島','山口',
+    '徳島','香川','愛媛','高知',
+    '福岡','佐賀','長崎','熊本','大分','宮崎','鹿児島','沖縄'
+  ]);
+$$;
+
 -- サイト側の検索（トップページのエリア枠・おすすめ枠・自由検索）はすべて
--- この関数経由で area_videos を読む。都道府県名と完全一致する行が1件でも
--- あれば、その都道府県の行だけに絞り込む（他県のタイトル・説明文への
--- あいまい一致は見せない）。これが無いと、例えば'石川'検索が東京の
--- 「小石川」を含む動画までヒットしてしまい、件数・再生数で押し負けた
--- ごく僅かな石川の動画が埋もれてしまう。完全一致する行が無いとき
--- （都道府県名以外の自由なキーワード検索）だけ、タイトル・説明文の
--- あいまい検索にフォールバックする。ジャンルが指定されていれば、それも
+-- この関数経由で area_videos を読む。検索語が都道府県名なら、その都道府県の
+-- 行だけに絞り込む（他県のタイトル・説明文へのあいまい一致は見せない）。
+-- これが無いと、例えば'石川'検索が東京の「小石川」を含む動画までヒットして
+-- しまい、件数・再生数で押し負けたごく僅かな石川の動画が埋もれてしまう。
+--
+-- 判定に「その都道府県の行が存在するか」ではなく都道府県名そのものを使うのは、
+-- まだ一度も取得していない都道府県で、あいまい検索に落ちてほしくないため。
+-- 例えば北海道の行が0件のとき、以前は「愛知で開催される北海道グルメイベント」
+-- のような“よその県の動画”がトップページの「北海道のおすすめスポット」に
+-- 並んでしまっていた。0件のときは0件のまま返し、枠ごと出さないほうが正しい。
+--
+-- 都道府県名以外の自由なキーワード検索（'名古屋'・'横浜' や任意の語）だけが、
+-- タイトル・説明文のあいまい検索になる。ジャンルが指定されていれば、それも
 -- 同様にタイトル・説明文で絞り込む（AND条件）。
 --
 -- sort_by='view_count'：トップページ（再生数順10件）・もっと見るページ
@@ -254,9 +287,7 @@ as $$
   where
     (
       case
-        when exists (
-          select 1 from public.area_videos where prefecture = search_query
-        )
+        when public.is_prefecture_name(search_query)
         then av.prefecture = search_query
         else (
           av.title ilike '%' || search_query || '%'
@@ -292,9 +323,7 @@ as $$
   where
     (
       case
-        when exists (
-          select 1 from public.area_videos where prefecture = search_query
-        )
+        when public.is_prefecture_name(search_query)
         then av.prefecture = search_query
         else (
           av.title ilike '%' || search_query || '%'

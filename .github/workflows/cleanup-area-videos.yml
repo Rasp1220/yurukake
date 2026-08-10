@@ -1,0 +1,29 @@
+name: Cleanup area videos
+
+# 保存済みの area_videos を点検し、「その都道府県の動画ではない」行
+# （例：北海道として保存された愛知の北海道グルメイベント動画）を消す。
+# YouTube APIは呼ばないのでクォータを消費しない。手動実行のみ。
+on:
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: "実際に削除する（false なら点検のみで何も消さない）"
+        type: boolean
+        default: false
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call cleanup-area-videos endpoint
+        env:
+          APPLY_PARAM: ${{ inputs.apply && '?apply=true' || '' }}
+        run: |
+          status=$(curl -s -o response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_BASE_URL }}/api/cron/cleanup-area-videos${APPLY_PARAM}")
+          echo "HTTP status: $status"
+          cat response.json
+          if [ "$status" -ge 300 ]; then
+            exit 1
+          fi
