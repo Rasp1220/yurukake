@@ -15,7 +15,7 @@ export default function BlogCard({ blog }: { blog: Blog }) {
             alt={blog.title}
             fill
             sizes="96px"
-            className="object-contain"
+            className="object-cover"
           />
         )}
       </div>
