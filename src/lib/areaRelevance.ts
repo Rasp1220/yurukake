@@ -152,7 +152,9 @@ export function isShortsDuration(durationSeconds: number | null | undefined): bo
 /**
  * 点検が「なぜこの行を消すのか」。レスポンスにそのまま出して、消える理由の
  * 内訳を目で確かめられるようにする。
- * - `category`：YouTubeの動画カテゴリが音楽・ゲーム等（最も確実な根拠）
+ * - `category`：YouTubeの動画カテゴリが無関係（`IRRELEVANT_VIDEO_CATEGORY_IDS`）、
+ *   かつスポットらしい語には一致しない（カテゴリも投稿者の選択ミスがあり得るため
+ *   無条件には信頼しない）
  * - `channel`：人がチャンネルごと無関係だと判断した（`area_video_channel_blocklist`）
  * - `shorts`：60秒以下の短尺動画（`?deleteShorts=true` のときだけ）
  * - `keyword`：無関係キーワードに一致し、スポットらしい語には一致しない
@@ -183,12 +185,21 @@ export interface IrrelevanceOptions {
  * →「人がチャンネル単位で下した判断」→「キーワード」の順にしてある。
  * どの根拠にも当たらない行は消さずに残す（`cleanup-area-videos` が
  * 「よその県だと確認できた行」だけを消すのと同じ考え方）。
+ *
+ * カテゴリ判定にも「本当はスポット紹介である」救済チェックを掛ける。
+ * 「安全なはず」の28（科学と技術）でさえ、投稿者がカテゴリを誤って
+ * 選んだキャンプ場紹介動画（タイトルに「グランピング」）が実データで
+ * 見つかった。カテゴリは文字列より信頼できるとはいえ、投稿者が選ぶ
+ * 以上は誤りが混ざりうるため、タイトル・説明文にスポットらしい語が
+ * 明確にあるときは、カテゴリ判定より優先して救済する。
  */
 export function judgeIrrelevance(
   video: IrrelevanceInput,
   options: IrrelevanceOptions,
 ): IrrelevanceReason | null {
-  if (isIrrelevantCategory(video.categoryId)) return "category";
+  if (isIrrelevantCategory(video.categoryId) && !looksLikeSpotVideo(video.title, video.description)) {
+    return "category";
+  }
   if (options.blockedChannels.has(video.channelTitle)) return "channel";
   if (options.deleteShorts && isShortsDuration(video.durationSeconds)) return "shorts";
   if (looksIrrelevantVideo(video.title, video.description)) return "keyword";
