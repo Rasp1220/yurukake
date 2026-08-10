@@ -161,6 +161,26 @@ create table if not exists public.area_videos (
 -- 動画は0件として扱う。
 alter table public.area_videos add column if not exists view_count bigint not null default 0;
 
+-- YouTubeの動画カテゴリID（10=音楽、20=ゲーム など）と動画の長さ（秒）。
+-- どちらも `videos.list` の snippet / contentDetails から取得する。再生数と
+-- 同じ1回の呼び出しで一緒に取れる（`videos.list` は part を増やしても
+-- 1ユニットのまま）ので、取得コストは実質ゼロ。
+--
+-- 無関係な動画の点検（/api/cron/cleanup-irrelevant-videos）が、タイトル・
+-- 説明文の文字列マッチという当てにならない手がかりではなく、投稿者が固定の
+-- 選択肢から選んだカテゴリという事実に基づいて判断できるようにするために
+-- 保存する。null は「まだ取得していない行」（バックフィル前の既存行、または
+-- YouTube側から取れなかった行）を意味するので、判断材料が無い行として
+-- 点検の対象外にする。
+alter table public.area_videos add column if not exists category_id integer;
+alter table public.area_videos add column if not exists duration_seconds integer;
+
+-- バックフィル（/api/cron/backfill-video-metadata）が「まだカテゴリを
+-- 取得していない行」を毎回探すので、その絞り込み用。
+create index if not exists area_videos_category_id_null_idx
+  on public.area_videos (video_id)
+  where category_id is null;
+
 create index if not exists area_videos_prefecture_idx on public.area_videos (prefecture);
 -- 都道府県で絞り込んだ上で再生数順に並べる（トップページ・もっと見るページ）
 -- クエリを高速化するための複合インデックス。
@@ -208,6 +228,37 @@ drop policy if exists "Anyone can prune area videos" on public.area_videos;
 create policy "Anyone can prune area videos"
   on public.area_videos for delete
   using (true);
+
+-- 「このチャンネルの動画はおでかけスポットと無関係」と人が判断したチャンネル。
+--
+-- YouTubeのノイズはチャンネル単位でまとまって入ってくる（1つのドッキリ
+-- チャンネルが複数の都道府県に何十行も入る）ため、1件ずつキーワードで
+-- 判定するより、チャンネルごと消すほうが確実で速い。
+--
+-- さらに重要なのは、消した動画が戻ってこなくなること。`area_videos` は
+-- video_id 主キーの upsert なので、行を消しても "Fetch area videos" を
+-- 再実行すれば同じ動画がまた入ってくる。ここに残した判断は取り込み側
+-- （fetch-area-videos）も参照するので、一度消したチャンネルは二度と
+-- 取り込まれない。
+create table if not exists public.area_video_channel_blocklist (
+  channel_title text primary key,
+  note text,
+  created_at timestamptz not null default now()
+);
+
+alter table public.area_video_channel_blocklist enable row level security;
+
+drop policy if exists "Anyone can read channel blocklist" on public.area_video_channel_blocklist;
+create policy "Anyone can read channel blocklist"
+  on public.area_video_channel_blocklist for select
+  using (true);
+
+-- 他の書き込み系ポリシーと同じく、既定のanonキーでの接続を前提に許可する。
+drop policy if exists "Anyone can write channel blocklist" on public.area_video_channel_blocklist;
+create policy "Anyone can write channel blocklist"
+  on public.area_video_channel_blocklist for all
+  using (true)
+  with check (true);
 
 -- バッチが「どの都道府県を次に処理すべきか」を判断するための進捗表。
 -- 最終更新が一番古い都道府県から優先的に処理することで、日々のクォータ内で

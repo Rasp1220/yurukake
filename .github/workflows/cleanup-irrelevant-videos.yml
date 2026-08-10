@@ -1,14 +1,29 @@
 name: Cleanup irrelevant videos
 
 # 保存済みの area_videos を点検し、「お出かけ・観光スポットと無関係」な行
-# （いたずら動画・日常vlogなどが都道府県名・ジャンル語に緩くマッチして
-# 紛れ込んだもの）を消す。都道府県が合っているかどうかは問わない。
+# （音楽・ゲーム動画などが都道府県名・ジャンル語に緩くマッチして紛れ込んだ
+# もの）を消す。都道府県が合っているかどうかは問わない。
 # YouTube APIは呼ばないのでクォータを消費しない。手動実行のみ。
+#
+# 使い方：まず mode=inspect でテーブルの中身（カテゴリ別・チャンネル別の
+# 内訳）を見て、消す条件を決めてから mode=dry-run → mode=apply と進める。
 on:
   workflow_dispatch:
     inputs:
-      apply:
-        description: "実際に削除する（false なら点検のみで何も消さない）"
+      mode:
+        description: "inspect=中身の集計を見るだけ / dry-run=消える行を確認 / apply=実際に削除"
+        type: choice
+        options:
+          - inspect
+          - dry-run
+          - apply
+        default: inspect
+      block_channel:
+        description: "無関係リストに登録するチャンネル名（カンマ区切り。再取得でも戻らなくなる）"
+        type: string
+        default: ""
+      delete_shorts:
+        description: "60秒以下の短尺動画も削除対象に含める"
         type: boolean
         default: false
 
@@ -18,11 +33,28 @@ jobs:
     steps:
       - name: Call cleanup-irrelevant-videos endpoint
         env:
-          APPLY_PARAM: ${{ inputs.apply && '?apply=true' || '' }}
+          MODE: ${{ inputs.mode }}
+          BLOCK_CHANNEL: ${{ inputs.block_channel }}
+          DELETE_SHORTS: ${{ inputs.delete_shorts }}
+          BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
+          params=""
+          case "$MODE" in
+            inspect) params="?inspect=true" ;;
+            apply)   params="?apply=true" ;;
+            *)       params="?dryRun=true" ;;
+          esac
+          if [ "$DELETE_SHORTS" = "true" ]; then
+            params="${params}&deleteShorts=true"
+          fi
+          if [ -n "$BLOCK_CHANNEL" ]; then
+            params="${params}&blockChannel=$(printf '%s' "$BLOCK_CHANNEL" | jq -sRr @uri)"
+          fi
+
           status=$(curl -s -o response.json -w "%{http_code}" \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "${{ secrets.APP_BASE_URL }}/api/cron/cleanup-irrelevant-videos${APPLY_PARAM}")
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            "${BASE_URL}/api/cron/cleanup-irrelevant-videos${params}")
           echo "HTTP status: $status"
           cat response.json
           if [ "$status" -ge 300 ]; then

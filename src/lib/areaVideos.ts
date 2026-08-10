@@ -234,6 +234,10 @@ export async function upsertAreaVideos(
       description: video.description,
       view_count: video.viewCount,
       published_at: video.publishedAt || null,
+      // 取れなかった場合は null のまま入れる（＝判断材料が無い行として、
+      // 点検の対象外になる）。
+      category_id: video.categoryId ?? null,
+      duration_seconds: video.durationSeconds ?? null,
       fetched_at: new Date().toISOString(),
     })),
     { onConflict: "video_id" },
@@ -246,12 +250,15 @@ export interface StoredAreaVideo {
   prefecture: string;
   title: string;
   description: string;
+  channelTitle: string;
+  categoryId: number | null;
+  durationSeconds: number | null;
 }
 
 /**
  * 保存済みの動画を `video_id` 順に1ページぶん読む（`/api/cron/cleanup-area-videos`
- * の点検用）。並び順を主キーで固定しているので、ページを送っても行が重複
- * したり抜けたりしない。
+ * と `/api/cron/cleanup-irrelevant-videos` の点検用）。並び順を主キーで固定して
+ * いるので、ページを送っても行が重複したり抜けたりしない。
  */
 export async function listAreaVideoPage(
   offset: number,
@@ -262,7 +269,7 @@ export async function listAreaVideoPage(
 
   const { data, error } = await supabase
     .from(TABLE)
-    .select("video_id, prefecture, title, description")
+    .select("video_id, prefecture, title, description, channel_title, category_id, duration_seconds")
     .order("video_id", { ascending: true })
     .range(offset, offset + limit - 1);
   if (error) throw new Error(error.message);
@@ -272,7 +279,96 @@ export async function listAreaVideoPage(
     prefecture: row.prefecture as string,
     title: row.title as string,
     description: (row.description as string) ?? "",
+    channelTitle: (row.channel_title as string) ?? "",
+    categoryId: (row.category_id as number | null) ?? null,
+    durationSeconds: (row.duration_seconds as number | null) ?? null,
   }));
+}
+
+/**
+ * まだカテゴリ・動画の長さを取得していない行のIDを返す
+ * （`/api/cron/backfill-video-metadata` 用）。
+ */
+export async function listVideoIdsMissingMetadata(limit: number): Promise<string[]> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("video_id")
+    .is("category_id", null)
+    .order("video_id", { ascending: true })
+    .limit(limit);
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => row.video_id as string);
+}
+
+/** 何件の行がまだカテゴリ・動画の長さを持っていないか。 */
+export async function countVideosMissingMetadata(): Promise<number> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { count, error } = await supabase
+    .from(TABLE)
+    .select("video_id", { count: "exact", head: true })
+    .is("category_id", null);
+  if (error) throw new Error(error.message);
+
+  return count ?? 0;
+}
+
+export interface VideoMetadata {
+  videoId: string;
+  categoryId: number | null;
+  durationSeconds: number | null;
+}
+
+/**
+ * 既存行にカテゴリ・動画の長さを書き戻す。行ごとに値が違うので1件ずつ
+ * update する（バックフィルは手動実行の一度きりなので、速さより素直さを取る）。
+ */
+export async function updateVideoMetadata(items: VideoMetadata[]): Promise<void> {
+  if (items.length === 0) return;
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  for (const item of items) {
+    const { error } = await supabase
+      .from(TABLE)
+      .update({ category_id: item.categoryId, duration_seconds: item.durationSeconds })
+      .eq("video_id", item.videoId);
+    if (error) throw new Error(error.message);
+  }
+}
+
+/**
+ * 人が「このチャンネルはおでかけスポットと無関係」と判断したチャンネル名。
+ * 点検（消す側）と取り込み（入れない側）の両方が参照するので、一度消した
+ * チャンネルは再取得でも戻ってこない。
+ */
+export async function listBlockedChannels(): Promise<Set<string>> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { data, error } = await supabase
+    .from("area_video_channel_blocklist")
+    .select("channel_title");
+  if (error) throw new Error(error.message);
+
+  return new Set((data ?? []).map((row) => row.channel_title as string));
+}
+
+export async function blockChannels(channelTitles: string[], note: string | null): Promise<void> {
+  if (channelTitles.length === 0) return;
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { error } = await supabase.from("area_video_channel_blocklist").upsert(
+    channelTitles.map((channelTitle) => ({ channel_title: channelTitle, note })),
+    { onConflict: "channel_title" },
+  );
+  if (error) throw new Error(error.message);
 }
 
 export async function deleteAreaVideos(videoIds: string[]): Promise<void> {

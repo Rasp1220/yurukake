@@ -6,6 +6,14 @@ export interface VideoResult {
   publishedAt: string;
   description: string;
   viewCount: number;
+  /**
+   * YouTubeの動画カテゴリID（10=音楽、20=ゲームなど）と動画の長さ（秒）。
+   * 無関係な動画の点検にだけ使い、画面には出さない。取り込みバッチと
+   * バックフィルバッチだけが値を入れるため、それ以外の経路（検索結果の
+   * 表示など）では未設定になる。
+   */
+  categoryId?: number | null;
+  durationSeconds?: number | null;
 }
 
 export interface SavedSpot {
