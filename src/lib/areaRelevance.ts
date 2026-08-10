@@ -1,4 +1,5 @@
 import { PREFECTURES, PREFECTURE_ALIASES, type Prefecture } from "./prefectures";
+import { SPOT_RELEVANCE_KEYWORDS } from "./constants";
 
 /**
  * 動画が「本当にその都道府県の動画か」を判定する。
@@ -76,4 +77,16 @@ export function belongsToPrefecture(
   prefecture: Prefecture,
 ): boolean {
   return judgeArea(title, description, prefecture) === "match";
+}
+
+// YouTube検索は都道府県名やジャンル語が緩くマッチするだけで採用してしまうため、
+// タイトル・説明文が「お出かけ・旅行スポット紹介」らしい内容かをキーワードで
+// 判定し、無関係な動画（いたずら動画・日常vlog等）を弾く。取り込み
+// （`/api/cron/fetch-area-videos`）と、保存済みの行を点検する
+// `/api/cron/cleanup-irrelevant-videos` の両方で共用する。
+const lowerCaseSpotKeywords = SPOT_RELEVANCE_KEYWORDS.map((keyword) => keyword.toLowerCase());
+
+export function looksLikeSpotVideo(title: string, description: string): boolean {
+  const haystack = `${title} ${description}`.toLowerCase();
+  return lowerCaseSpotKeywords.some((keyword) => haystack.includes(keyword));
 }
