@@ -121,11 +121,12 @@ export async function getProfile(userId: string): Promise<Profile> {
   return profileFromRow(userId, data as ProfileRow | null);
 }
 
-/** 「さがす」の横断検索用。タイトルが検索語にマッチする公開済みブログを返す。 */
-export async function searchBlogs(query: string): Promise<BlogSearchResult[]> {
+/** 「さがす」の横断検索用。タイトルが検索語（・ジャンル）にマッチする公開済みブログを返す。 */
+export async function searchBlogs(query: string, genre?: string | null): Promise<BlogSearchResult[]> {
   const supabase = createClient();
   const { data, error } = await supabase.rpc("search_blogs", {
     search_query: query.trim(),
+    search_genre: genre?.trim() || null,
   });
 
   if (error) throw new Error("ブログの検索に失敗しました");
