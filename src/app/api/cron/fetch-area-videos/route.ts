@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GENRES, SPOT_RELEVANCE_KEYWORDS } from "@/lib/constants";
 import { PREFECTURES, type Prefecture } from "@/lib/prefectures";
+import { belongsToPrefecture } from "@/lib/areaRelevance";
 import {
   getFetchProgressOrderedByStaleness,
   recordFetchProgress,
@@ -58,7 +59,7 @@ class YouTubeError extends Error {
 }
 
 async function fetchPage(
-  prefecture: string,
+  prefecture: Prefecture,
   genre: string | null,
   apiKey: string,
   pageToken: string | undefined,
@@ -98,9 +99,15 @@ async function fetchPage(
     // サムネイルが無い動画は一覧に出しても絵が出ないうえ、`thumbnail_url` は
     // NOT NULL なので、1件でも混ざるとその都道府県の upsert がまるごと失敗する。
     // 表示できないものは最初から取り込まない。
-    // あわせて、お出かけ・旅行スポットらしいキーワードを含まない動画も除外する。
+    // あわせて、お出かけ・旅行スポットらしいキーワードを含まない動画と、
+    // 検索した都道府県の動画だと確認できない動画（YouTubeが緩く拾ってくる
+    // よその県の話）も除外する。
     .filter(
-      (item: VideoResult) => item.videoId && item.thumbnailUrl && looksLikeSpotVideo(item),
+      (item: VideoResult) =>
+        item.videoId &&
+        item.thumbnailUrl &&
+        looksLikeSpotVideo(item) &&
+        belongsToPrefecture(item.title, item.description, prefecture),
     );
 
   return { items, nextPageToken: data.nextPageToken };

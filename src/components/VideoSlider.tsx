@@ -34,6 +34,12 @@ export default function VideoSlider({
       });
   }, [query]);
 
+  // まだ動画を貯めていない都道府県は、見出しだけが並ぶ空の枠になってしまう。
+  // 「北海道のおすすめスポット」の枠を埋めるために他県の動画を出すのは
+  // 誤りなので（取り込み側・検索側どちらもその都道府県の動画しか返さない）、
+  // 中身が無いときは枠ごと出さない。
+  if (status === "idle" && videos.length === 0) return null;
+
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">

@@ -61,10 +61,11 @@ function toVideoResult(row: AreaVideoRow): VideoResult {
 export type AreaVideoSort = "random" | "view_count" | "published_at";
 
 /**
- * 都道府県名と完全一致すればその都道府県に絞り込み、一致しなければ
- * タイトル・説明文をあいまい検索する（`supabase/schema.sql` の
- * `search_area_videos` 関数）。ジャンルが指定されていれば、それも同様に
- * タイトル・説明文で絞り込む。
+ * 都道府県名、または主要都市・エリア名（「札幌」「名古屋」など。
+ * `resolve_prefecture_query`／`supabase/schema.sql`）に一致すればその
+ * 都道府県に絞り込み、どちらにも一致しなければタイトル・説明文をあいまい
+ * 検索する（`search_area_videos` 関数）。ジャンルが指定されていれば、
+ * それも同様にタイトル・説明文で絞り込む。
  *
  * ジャンルで絞り込んだ結果が0件の場合、ジャンル無しで再検索して
  * 「何も出ない」より「ジャンルは外れるが候補は出す」を優先する。
@@ -237,6 +238,71 @@ export async function upsertAreaVideos(
     })),
     { onConflict: "video_id" },
   );
+  if (error) throw new Error(error.message);
+}
+
+export interface StoredAreaVideo {
+  videoId: string;
+  prefecture: string;
+  title: string;
+  description: string;
+}
+
+/**
+ * 保存済みの動画を `video_id` 順に1ページぶん読む（`/api/cron/cleanup-area-videos`
+ * の点検用）。並び順を主キーで固定しているので、ページを送っても行が重複
+ * したり抜けたりしない。
+ */
+export async function listAreaVideoPage(
+  offset: number,
+  limit: number,
+): Promise<StoredAreaVideo[]> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("video_id, prefecture, title, description")
+    .order("video_id", { ascending: true })
+    .range(offset, offset + limit - 1);
+  if (error) throw new Error(error.message);
+
+  return (data ?? []).map((row) => ({
+    videoId: row.video_id as string,
+    prefecture: row.prefecture as string,
+    title: row.title as string,
+    description: (row.description as string) ?? "",
+  }));
+}
+
+export async function deleteAreaVideos(videoIds: string[]): Promise<void> {
+  if (videoIds.length === 0) return;
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { error } = await supabase.from(TABLE).delete().in("video_id", videoIds);
+  if (error) throw new Error(error.message);
+}
+
+/**
+ * `area_fetch_progress.video_count` を数え直す。点検で行を削除したあとに使う。
+ * `recordFetchProgress` と違い `last_fetched_at` は触らない（点検は取得では
+ * ないので、取得ローテーションの順番を狂わせないため）。
+ */
+export async function refreshVideoCount(prefecture: string): Promise<void> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+
+  const { count, error: countError } = await supabase
+    .from(TABLE)
+    .select("video_id", { count: "exact", head: true })
+    .eq("prefecture", prefecture);
+  if (countError) throw new Error(countError.message);
+
+  const { error } = await supabase
+    .from("area_fetch_progress")
+    .update({ video_count: count ?? 0 })
+    .eq("prefecture", prefecture);
   if (error) throw new Error(error.message);
 }
 
