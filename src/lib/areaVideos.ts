@@ -58,7 +58,7 @@ function toVideoResult(row: AreaVideoRow): VideoResult {
   };
 }
 
-export type AreaVideoSort = "random" | "view_count";
+export type AreaVideoSort = "random" | "view_count" | "published_at";
 
 /**
  * 都道府県名と完全一致すればその都道府県に絞り込み、一致しなければ

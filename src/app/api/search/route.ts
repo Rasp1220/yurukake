@@ -25,7 +25,8 @@ export async function GET(request: NextRequest) {
   const offset = Number.isFinite(requestedOffset) ? Math.max(Math.trunc(requestedOffset), 0) : 0;
 
   const sortParam = request.nextUrl.searchParams.get("sort");
-  const sort: AreaVideoSort = sortParam === "view_count" ? "view_count" : "random";
+  const sort: AreaVideoSort =
+    sortParam === "view_count" || sortParam === "published_at" ? sortParam : "random";
 
   // 総件数はページング表示（もっと見るページ）だけが必要とする。トップページの
   // エリア枠・おすすめ枠まで数えると、1回の表示でテーブル全体を走査する

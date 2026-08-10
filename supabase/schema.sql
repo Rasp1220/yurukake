@@ -258,6 +258,7 @@ as $$
     )
   order by
     case when sort_by = 'view_count' then view_count end desc nulls last,
+    case when sort_by = 'published_at' then published_at end desc nulls last,
     case when sort_by = 'random' then random() end
   limit result_limit
   offset result_offset;
