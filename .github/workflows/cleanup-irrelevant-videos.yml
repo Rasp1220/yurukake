@@ -18,6 +18,10 @@ on:
           - dry-run
           - apply
         default: inspect
+      sample_category:
+        description: "inspect時、指定カテゴリIDのタイトルを最大100件表示（例 10=音楽, 2=自動車, 22=人物とブログ）"
+        type: string
+        default: ""
       block_channel:
         description: "無関係リストに登録するチャンネル名（カンマ区切り。再取得でも戻らなくなる）"
         type: string
@@ -35,6 +39,7 @@ jobs:
         env:
           MODE: ${{ inputs.mode }}
           BLOCK_CHANNEL: ${{ inputs.block_channel }}
+          SAMPLE_CATEGORY: ${{ inputs.sample_category }}
           DELETE_SHORTS: ${{ inputs.delete_shorts }}
           BASE_URL: ${{ secrets.APP_BASE_URL }}
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
@@ -47,6 +52,9 @@ jobs:
           esac
           if [ "$DELETE_SHORTS" = "true" ]; then
             params="${params}&deleteShorts=true"
+          fi
+          if [ -n "$SAMPLE_CATEGORY" ]; then
+            params="${params}&sampleCategory=$(printf '%s' "$SAMPLE_CATEGORY" | jq -sRr @uri)"
           fi
           if [ -n "$BLOCK_CHANNEL" ]; then
             params="${params}&blockChannel=$(printf '%s' "$BLOCK_CHANNEL" | jq -sRr @uri)"

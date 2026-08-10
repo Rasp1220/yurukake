@@ -50,6 +50,12 @@ const DELETE_CHUNK_SIZE = 200;
 const EXAMPLE_LIMIT = 50;
 // `?inspect=true` の集計で返すチャンネル・カテゴリの件数。
 const INSPECT_CHANNEL_LIMIT = 40;
+// カテゴリごとに何本のタイトルを見せるか。1本だけだと、そのカテゴリを
+// 削除して良いか判断できない（実際、1本のサンプルで「音楽カテゴリは
+// 無関係」と判断しかけて誤りだった）ため複数返す。
+const CATEGORY_SAMPLE_LIMIT = 5;
+// `?sampleCategory=<ID>` で1カテゴリを掘り下げるときに返す件数。
+const CATEGORY_DRILLDOWN_LIMIT = 100;
 
 function categoryLabel(categoryId: number | null): string {
   if (categoryId === null) return "未取得（バックフィル前）";
@@ -76,6 +82,12 @@ export async function GET(request: NextRequest) {
   const inspect = params.get("inspect") === "true";
   const apply = params.get("apply") === "true";
   const deleteShorts = params.get("deleteShorts") === "true";
+  // 1カテゴリを掘り下げて見るためのカテゴリID（`?sampleCategory=10`）。
+  const rawSampleCategory = params.get("sampleCategory");
+  const sampleCategory =
+    rawSampleCategory !== null && rawSampleCategory !== "" && Number.isFinite(Number(rawSampleCategory))
+      ? Number(rawSampleCategory)
+      : null;
   const channelsToBlock = (params.get("blockChannel") ?? "")
     .split(",")
     .map((name) => name.trim())
@@ -99,7 +111,10 @@ export async function GET(request: NextRequest) {
     // `?inspect=true` 用のテーブル全体の集計。
     const allByCategory = new Map<string, number>();
     const allByChannel = new Map<string, number>();
-    const categorySamples = new Map<string, string>();
+    const categorySamples = new Map<string, string[]>();
+    const shortsByCategory = new Map<string, number>();
+    // `?sampleCategory=<ID>` で指定した1カテゴリのタイトル一覧。
+    const drilldown: { title: string; channelTitle: string; durationSeconds: number | null }[] = [];
     let shortsCount = 0;
     let missingMetadata = 0;
 
@@ -111,9 +126,30 @@ export async function GET(request: NextRequest) {
         const label = categoryLabel(video.categoryId);
         allByCategory.set(label, (allByCategory.get(label) ?? 0) + 1);
         allByChannel.set(video.channelTitle, (allByChannel.get(video.channelTitle) ?? 0) + 1);
-        if (!categorySamples.has(label)) categorySamples.set(label, video.title);
+
+        const samples = categorySamples.get(label) ?? [];
+        if (samples.length < CATEGORY_SAMPLE_LIMIT) {
+          samples.push(video.title);
+          categorySamples.set(label, samples);
+        }
+
         if (video.categoryId === null) missingMetadata++;
-        if (isShortsDuration(video.durationSeconds)) shortsCount++;
+        if (isShortsDuration(video.durationSeconds)) {
+          shortsCount++;
+          shortsByCategory.set(label, (shortsByCategory.get(label) ?? 0) + 1);
+        }
+
+        if (
+          sampleCategory !== null &&
+          video.categoryId === sampleCategory &&
+          drilldown.length < CATEGORY_DRILLDOWN_LIMIT
+        ) {
+          drilldown.push({
+            title: video.title,
+            channelTitle: video.channelTitle,
+            durationSeconds: video.durationSeconds,
+          });
+        }
 
         const reason: IrrelevanceReason | null = judgeIrrelevance(video, {
           blockedChannels,
@@ -142,9 +178,20 @@ export async function GET(request: NextRequest) {
         missingMetadata,
         shortsCount,
         byCategory: topEntries(allByCategory),
+        shortsByCategory: topEntries(shortsByCategory),
         categorySamples: Object.fromEntries(categorySamples),
         topChannels: topEntries(allByChannel, INSPECT_CHANNEL_LIMIT),
         blockedChannels: [...blockedChannels],
+        ...(sampleCategory !== null
+          ? {
+              sampleCategory: {
+                categoryId: sampleCategory,
+                label: categoryLabel(sampleCategory),
+                shown: drilldown.length,
+                videos: drilldown,
+              },
+            }
+          : {}),
         wouldDelete: {
           total: irrelevant.length,
           byReason: topEntries(irrelevantByReason),
@@ -152,7 +199,7 @@ export async function GET(request: NextRequest) {
         hint:
           missingMetadata > 0
             ? `カテゴリ未取得の行が${missingMetadata}件あります。先に 'Backfill video metadata' を実行すると、カテゴリを根拠にした点検ができるようになります。`
-            : "byCategory・topChannels を見て、消したいカテゴリがあれば IRRELEVANT_VIDEO_CATEGORY_IDS に追加、消したいチャンネルは ?blockChannel=名前 で登録してください。",
+            : "カテゴリを削除対象に足す前に、必ず ?inspect=true&sampleCategory=<ID> でそのカテゴリのタイトルをまとめて確認してください（categorySamples の数本だけで判断すると誤ります）。消したいチャンネルは ?blockChannel=名前 で登録できます。",
       });
     }
 
