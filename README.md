@@ -95,7 +95,22 @@ npm run dev
 補足：
 
 - 初回は全都道府県が空の状態から始まるため、`/api/cron/fetch-area-videos` を（`workflow_dispatch` から手動実行、または直接 `curl` で）何度か実行して埋めるまでは検索結果が少ない状態になります
-- 上記5の都道府県チェックは**これから取り込む動画にしか効きません**。それ以前に貯めた行（「北海道のおすすめスポット」に並んでいた愛知・大阪の動画など）を消すには、Actions タブ → "Cleanup area videos" → "Run workflow" から `/api/cron/cleanup-area-videos` を実行してください。バッチと同じ判定ロジックで保存済みの行を点検し、その都道府県の動画ではない行を削除します（YouTube APIは呼ばないのでクォータを消費しません）。既定は**点検のみのドライラン**で、何が消えるかを件数と例で返します。実際に削除するには `apply` にチェックを入れて実行（直接叩く場合は `?apply=true`）。削除で件数が減った都道府県は、"Fetch area videos" の手動実行（`force=true`）で取得し直せます
+- 上記5の都道府県チェックは**これから取り込む動画にしか効きません**。それ以前に貯めた行（「北海道のおすすめスポット」に並んでいた愛知・大阪の動画など）を消すには、Actions タブ → "Cleanup area videos" → "Run workflow" から `/api/cron/cleanup-area-videos` を実行してください（YouTube APIは呼ばないのでクォータを消費しません）
+
+  **消す条件は取り込みの条件よりわざと緩くしてあります。** 取り込みは「入れない」だけで何も失われないので、どのエリアも名指ししていない動画（`unknown`）まで弾きますが、点検が消すのは**よその県を名指ししていると確認できた行（`other-area`）だけ**です。判断できない行はそのまま残し、件数だけ `keptAsUnknown` として報告します
+
+  既定は**点検のみのドライラン**で、消える件数・都道府県ごとの内訳・実際に消える動画のタイトル（最大50件）を返します。中身を確認してから、`apply` にチェックを入れて実行してください（直接叩く場合は `?apply=true`）。削除で件数が減った都道府県は "Fetch area videos" の手動実行（`force=true`）で取得し直せます
+
+  `area_videos` はYouTubeから何度でも作り直せるキャッシュで、ユーザーのデータ（`spots`／`plans`／`blogs`／`profiles`）には一切触れません（行きたいリストは保存時に動画情報をコピーしているため、元の行が消えても表示は変わりません）。ただし取得し直すにはクォータの都合で日数がかかるので、削除前に SQL Editor でバックアップを取っておくと確実に元へ戻せます：
+
+  ```sql
+  -- 削除前（テーブル名の日付は実行日に合わせる）
+  create table public.area_videos_backup_20260810 as select * from public.area_videos;
+
+  -- 戻したくなったら
+  insert into public.area_videos select * from public.area_videos_backup_20260810
+  on conflict (video_id) do nothing;
+  ```
 - 既定ではanonキーで書き込むため、`area_videos`／`area_fetch_progress` のポリシーは書き込みを許可しています。厳しくしたい場合は `SUPABASE_SERVICE_ROLE_KEY` を設定した上で、`supabase/schema.sql` のコメントに従って書き込みポリシーを削除してください
 
 ## ディレクトリ構成

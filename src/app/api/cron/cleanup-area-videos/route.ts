@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isPrefecture } from "@/lib/prefectures";
-import { belongsToPrefecture } from "@/lib/areaRelevance";
+import { judgeArea } from "@/lib/areaRelevance";
 import {
   deleteAreaVideos,
   listAreaVideoPage,
@@ -9,13 +9,17 @@ import {
 } from "@/lib/areaVideos";
 
 /**
- * 保存済みの `area_videos` を点検し、「その都道府県の動画ではない」行を消す。
+ * 保存済みの `area_videos` を点検し、「よその県の話だと確認できた」行を消す。
  *
  * 取り込み側の都道府県チェック（`src/lib/areaRelevance.ts`）はこれから取り込む
  * 動画にしか効かないため、それ以前に貯めた行（トップページの「北海道の
  * おすすめスポット」に並んでいた愛知・大阪の動画など）はこのエンドポイントで
- * 掃除する。判定ロジックはバッチと同じものを使うので、点検を通った行は
- * 「いま取り込み直しても残る行」と一致する。
+ * 掃除する。
+ *
+ * 削除の条件は取り込みの条件よりも意図的に緩くしてある。取り込みは「入れない」
+ * だけで何も失われないので `unknown`（どのエリアも名指ししていない動画）まで
+ * 弾くが、こちらは消す側なので `other-area`（よその県を名指ししている動画）
+ * だけを消し、判断できない行はそのまま残す。
  *
  * YouTube APIは呼ばない（クォータを消費しない）。既定は点検だけの
  * ドライラン。実際に削除するときだけ `?apply=true` を付ける。
@@ -27,13 +31,8 @@ export const maxDuration = 300;
 // 大きくなりすぎない程度に分割する。
 const PAGE_SIZE = 1000;
 const DELETE_CHUNK_SIZE = 200;
-
-function isMisfiled(video: StoredAreaVideo): boolean {
-  // 47都道府県以外の値が入っている行（過去の実装で入り得た想定外の値）は
-  // 判定のしようがないため、まとめて掃除対象にする。
-  if (!isPrefecture(video.prefecture)) return true;
-  return !belongsToPrefecture(video.title, video.description, video.prefecture);
-}
+// ドライランで「何が消えるのか」を目で確かめるために返す例の件数。
+const EXAMPLE_LIMIT = 50;
 
 export async function GET(request: NextRequest) {
   const cronSecret = process.env.CRON_SECRET;
@@ -49,8 +48,11 @@ export async function GET(request: NextRequest) {
 
   // 読みながら消すとページの境界がずれるので、先に全件を点検してから消す。
   const misfiled: StoredAreaVideo[] = [];
-  const removedByPrefecture = new Map<string, number>();
+  const misfiledByPrefecture = new Map<string, number>();
   let scanned = 0;
+  // 判断できずに残した行（どのエリアも名指ししていない動画と、47都道府県
+  // 以外の値が入っている想定外の行）。消さないが、件数だけ報告する。
+  let keptAsUnknown = 0;
 
   try {
     for (let offset = 0; ; offset += PAGE_SIZE) {
@@ -58,11 +60,21 @@ export async function GET(request: NextRequest) {
       scanned += page.length;
 
       for (const video of page) {
-        if (!isMisfiled(video)) continue;
+        if (!isPrefecture(video.prefecture)) {
+          keptAsUnknown++;
+          continue;
+        }
+        const verdict = judgeArea(video.title, video.description, video.prefecture);
+        if (verdict === "unknown") {
+          keptAsUnknown++;
+          continue;
+        }
+        if (verdict === "match") continue;
+
         misfiled.push(video);
-        removedByPrefecture.set(
+        misfiledByPrefecture.set(
           video.prefecture,
-          (removedByPrefecture.get(video.prefecture) ?? 0) + 1,
+          (misfiledByPrefecture.get(video.prefecture) ?? 0) + 1,
         );
       }
 
@@ -75,7 +87,7 @@ export async function GET(request: NextRequest) {
           misfiled.slice(i, i + DELETE_CHUNK_SIZE).map((video) => video.videoId),
         );
       }
-      for (const prefecture of removedByPrefecture.keys()) {
+      for (const prefecture of misfiledByPrefecture.keys()) {
         await refreshVideoCount(prefecture);
       }
     }
@@ -88,16 +100,16 @@ export async function GET(request: NextRequest) {
     applied: apply,
     scanned,
     misfiledCount: misfiled.length,
+    keptAsUnknown,
     misfiledByPrefecture: Object.fromEntries(
-      [...removedByPrefecture.entries()].sort((a, b) => b[1] - a[1]),
+      [...misfiledByPrefecture.entries()].sort((a, b) => b[1] - a[1]),
     ),
-    // ドライランで「何が消えるのか」を目で確かめられるように、先頭だけ返す。
-    examples: misfiled.slice(0, 20).map((video) => ({
+    examples: misfiled.slice(0, EXAMPLE_LIMIT).map((video) => ({
       prefecture: video.prefecture,
       title: video.title,
     })),
     hint: apply
       ? "削除しました。件数を戻したい都道府県は 'Fetch area videos' の Run workflow（force=true）で取得し直してください。"
-      : "点検のみ実行しました（削除していません）。実際に削除するには ?apply=true を付けて実行してください。",
+      : "点検のみ実行しました（削除していません）。examples が実際に消える動画です。内容を確認したうえで ?apply=true を付けて実行してください。",
   });
 }
