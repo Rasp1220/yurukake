@@ -156,7 +156,9 @@ export function isShortsDuration(durationSeconds: number | null | undefined): bo
  *   かつスポットらしい語には一致しない（カテゴリも投稿者の選択ミスがあり得るため
  *   無条件には信頼しない）
  * - `channel`：人がチャンネルごと無関係だと判断した（`area_video_channel_blocklist`）
- * - `shorts`：60秒以下の短尺動画（`?deleteShorts=true` のときだけ）
+ * - `shorts`：60秒以下の短尺動画（`?deleteShorts=true` のときだけ）、
+ *   かつスポットらしい語には一致しない（動画の長さは内容の関連度とは
+ *   無関係なので、他の根拠が無いことを必須にする）
  * - `keyword`：無関係キーワードに一致し、スポットらしい語には一致しない
  */
 export type IrrelevanceReason = "category" | "channel" | "shorts" | "keyword";
@@ -186,22 +188,32 @@ export interface IrrelevanceOptions {
  * どの根拠にも当たらない行は消さずに残す（`cleanup-area-videos` が
  * 「よその県だと確認できた行」だけを消すのと同じ考え方）。
  *
- * カテゴリ判定にも「本当はスポット紹介である」救済チェックを掛ける。
- * 「安全なはず」の28（科学と技術）でさえ、投稿者がカテゴリを誤って
+ * カテゴリ判定・Shorts判定にも「本当はスポット紹介である」救済チェックを
+ * 掛ける。「安全なはず」の28（科学と技術）でさえ、投稿者がカテゴリを誤って
  * 選んだキャンプ場紹介動画（タイトルに「グランピング」）が実データで
  * 見つかった。カテゴリは文字列より信頼できるとはいえ、投稿者が選ぶ
  * 以上は誤りが混ざりうるため、タイトル・説明文にスポットらしい語が
- * 明確にあるときは、カテゴリ判定より優先して救済する。
+ * 明確にあるときは、カテゴリ判定・Shorts判定より優先して救済する。
+ *
+ * Shorts判定は特に注意が必要だった。動画プールの63%がShortsで、その
+ * 大半は正当なスポット紹介だったにもかかわらず、`deleteShorts=true` を
+ * 救済チェック無しで運用したところ「60秒以下」というだけで2,868件中
+ * 1,821件（うち1,816件がShorts理由）を削除してしまう事故が実際に起きた。
+ * 長さは動画の切り口（Shorts化）であって内容の関連度とは無関係なので、
+ * 「消す根拠」ではなく「他の根拠と併用して優先度を上げる程度の弱い
+ * シグナル」として扱うべきだった。救済チェックを必須にすることで、
+ * スポットらしい語が無いShorts（雑学・トリビア系の短尺動画など）だけを
+ * 対象にする。
  */
 export function judgeIrrelevance(
   video: IrrelevanceInput,
   options: IrrelevanceOptions,
 ): IrrelevanceReason | null {
-  if (isIrrelevantCategory(video.categoryId) && !looksLikeSpotVideo(video.title, video.description)) {
-    return "category";
-  }
+  const isSpotVideo = looksLikeSpotVideo(video.title, video.description);
+
+  if (isIrrelevantCategory(video.categoryId) && !isSpotVideo) return "category";
   if (options.blockedChannels.has(video.channelTitle)) return "channel";
-  if (options.deleteShorts && isShortsDuration(video.durationSeconds)) return "shorts";
+  if (options.deleteShorts && isShortsDuration(video.durationSeconds) && !isSpotVideo) return "shorts";
   if (looksIrrelevantVideo(video.title, video.description)) return "keyword";
   return null;
 }
