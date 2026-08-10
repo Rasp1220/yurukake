@@ -112,6 +112,7 @@ npm run dev
   on conflict (video_id) do nothing;
   ```
 - 既定ではanonキーで書き込むため、`area_videos`／`area_fetch_progress` のポリシーは書き込みを許可しています。厳しくしたい場合は `SUPABASE_SERVICE_ROLE_KEY` を設定した上で、`supabase/schema.sql` のコメントに従って書き込みポリシーを削除してください
+- 上記4のキーワードチェック（`looksLikeSpotVideo`）も**これから取り込む動画にしか効きません**。それ以前に貯めた行（都道府県名・ジャンル語に緩くマッチしただけの家族vlogやドッキリ動画など、お出かけ・観光スポットと無関係な動画）を消すには、Actions タブ → "Cleanup irrelevant videos" → "Run workflow" から `/api/cron/cleanup-irrelevant-videos` を実行してください（YouTube APIは呼ばないのでクォータを消費しません）。都道府県が合っているかどうかは問わず、タイトル・説明文に「お出かけ」「旅行」「観光」「スポット」などのキーワード（`SPOT_RELEVANCE_KEYWORDS`）が一つも無い行だけを対象にするので、"Cleanup area videos"（都道府県違いの点検）とは別軸のチェックです。こちらも既定は点検のみのドライランで、`apply` にチェックを入れるまでは何も削除しません
 
 ## ディレクトリ構成
 
@@ -135,11 +136,12 @@ src/
     api/search/blogs/      # 公開ブログをタイトル検索して返すAPI
     api/cron/fetch-area-videos/  # YouTube APIを呼んでarea_videosを埋めるバッチ
     api/cron/cleanup-area-videos/ # 保存済みarea_videosを点検し、その都道府県の動画ではない行を消すバッチ（YouTubeは呼ばない）
+    api/cron/cleanup-irrelevant-videos/ # 保存済みarea_videosを点検し、お出かけ・観光スポットと無関係な行を消すバッチ（YouTubeは呼ばない）
   components/              # UIコンポーネント（ShareButtons, RecommendedSection, RichTextEditor（TinyMCE）, SnsIcon, BlogCard, BlogResultCard, HamburgerMenuほか）
   lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プラン／ブログCRUD・レコメンドロジック
     areaVideos.ts           # 動画プールの読み書き（サーバー専用）
     prefectures.ts          # 47都道府県リストと、都道府県ごとの主要都市・エリア名（PREFECTURE_ALIASES）
-    areaRelevance.ts        # 取り込んだ動画が本当にその都道府県の動画かの判定（バッチと点検バッチで共用）
+    areaRelevance.ts        # 取り込んだ動画が本当にその都道府県の動画か・お出かけスポットらしいかの判定（バッチと点検バッチで共用）
     constants.ts             # AREAS／GENRES／PROFILE_TAGSなどの固定候補リスト
     blogs.ts                # ブログ／パーツのCRUD（本人用）とメディアアップロード（Supabase Storage）
     publicBlogs.ts          # 公開ブログ／プロフィール／ブログ検索の読み取り専用フェッチ（サーバー専用、未ログインでも動作）
@@ -154,7 +156,8 @@ supabase/
   schema.sql               # spots／plans／plan_items／blogs／blog_blocks／profiles／area_videos／area_fetch_progressテーブル定義とRLSポリシー、blog-media Storageバケット
 .github/workflows/
   fetch-area-videos.yml    # バッチを毎日呼び出すGitHub Actions
-  cleanup-area-videos.yml  # 点検バッチを手動実行するGitHub Actions（既定はドライラン）
+  cleanup-area-videos.yml  # 都道府県違いの点検バッチを手動実行するGitHub Actions（既定はドライラン）
+  cleanup-irrelevant-videos.yml # お出かけ・観光スポットと無関係な動画の点検バッチを手動実行するGitHub Actions（既定はドライラン）
 ```
 
 ## 今後の拡張（フェーズ2）

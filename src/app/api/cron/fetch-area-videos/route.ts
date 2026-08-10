@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GENRES, SPOT_RELEVANCE_KEYWORDS } from "@/lib/constants";
+import { GENRES } from "@/lib/constants";
 import { PREFECTURES, type Prefecture } from "@/lib/prefectures";
-import { belongsToPrefecture } from "@/lib/areaRelevance";
+import { belongsToPrefecture, looksLikeSpotVideo } from "@/lib/areaRelevance";
 import {
   getFetchProgressOrderedByStaleness,
   recordFetchProgress,
@@ -106,21 +106,11 @@ async function fetchPage(
       (item: VideoResult) =>
         item.videoId &&
         item.thumbnailUrl &&
-        looksLikeSpotVideo(item) &&
+        looksLikeSpotVideo(item.title, item.description) &&
         belongsToPrefecture(item.title, item.description, prefecture),
     );
 
   return { items, nextPageToken: data.nextPageToken };
-}
-
-// YouTube検索は都道府県名やジャンル語が緩くマッチするだけで採用してしまうため、
-// タイトル・説明文が「お出かけ・旅行スポット紹介」らしい内容かをキーワードで
-// 判定し、無関係な動画（いたずら動画・日常vlog等）を取り込み対象から除く。
-const lowerCaseKeywords = SPOT_RELEVANCE_KEYWORDS.map((keyword) => keyword.toLowerCase());
-
-function looksLikeSpotVideo(item: VideoResult): boolean {
-  const haystack = `${item.title} ${item.description}`.toLowerCase();
-  return lowerCaseKeywords.some((keyword) => haystack.includes(keyword));
 }
 
 /** videos.list（統計情報）で再生数をまとめて取得する。最大50件/回。 */
