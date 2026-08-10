@@ -80,7 +80,7 @@ export default function SearchResults({ query }: { query: string }) {
 
       {savedMessage && (
         <div className="rounded-xl bg-green-50 px-4 py-2 text-sm text-green-700">
-          行きたいリストに追加しました！マイページから確認できます。
+          行きたいリストに追加しました！プラン画面から確認できます。
         </div>
       )}
 

@@ -288,6 +288,215 @@ as $$
     )
 $$;
 
+-- お出かけブログ機能: ブログ本体（タイトル・サムネイル）と、本文を構成する
+-- パーツ（テキスト／画像／動画）。パーツは並び順を持ち、必要な種類だけを
+-- 好きな順番で追加できる。
+
+create table if not exists public.blogs (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  title text not null,
+  thumbnail_url text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+-- 下書き/公開の切り替え。既定は'draft'なので、作成しただけのブログが
+-- 本人の意図なく他人に見えることはない。
+alter table public.blogs add column if not exists status text not null default 'draft';
+alter table public.blogs drop constraint if exists blogs_status_check;
+alter table public.blogs add constraint blogs_status_check check (status in ('draft', 'published'));
+
+create index if not exists blogs_user_id_idx on public.blogs (user_id);
+
+alter table public.blogs enable row level security;
+
+-- 本人は下書き・公開済みどちらも見える（次の「公開済みは誰でも閲覧可」ポリシーと
+-- OR条件で組み合わされる）。
+drop policy if exists "Users can view their own blogs" on public.blogs;
+create policy "Users can view their own blogs"
+  on public.blogs for select
+  using (auth.uid() = user_id);
+
+-- ブロガーの公開プロフィールページ（/blogger/[userId]）・公開ブログページ
+-- （/blogs/[id]）は未ログインでも見られるようにするため、公開済み(status='published')
+-- のブログは誰でも閲覧できるようにする。
+drop policy if exists "Anyone can view published blogs" on public.blogs;
+create policy "Anyone can view published blogs"
+  on public.blogs for select
+  using (status = 'published');
+
+drop policy if exists "Users can insert their own blogs" on public.blogs;
+create policy "Users can insert their own blogs"
+  on public.blogs for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own blogs" on public.blogs;
+create policy "Users can update their own blogs"
+  on public.blogs for update
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can delete their own blogs" on public.blogs;
+create policy "Users can delete their own blogs"
+  on public.blogs for delete
+  using (auth.uid() = user_id);
+
+-- type: 'text'（TinyMCEのHTML）／'image'／'video'（アップロードしたファイルのURL）。
+-- content にHTMLまたはURLをそのまま保存する（パーツの種類ごとにテーブルを
+-- 分けるほどの複雑さがないため、1テーブルにまとめている）。
+create table if not exists public.blog_blocks (
+  id uuid primary key default gen_random_uuid(),
+  blog_id uuid not null references public.blogs (id) on delete cascade,
+  user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  type text not null check (type in ('text', 'image', 'video')),
+  content text not null default '',
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists blog_blocks_blog_id_idx on public.blog_blocks (blog_id);
+
+alter table public.blog_blocks enable row level security;
+
+drop policy if exists "Users can view their own blog blocks" on public.blog_blocks;
+create policy "Users can view their own blog blocks"
+  on public.blog_blocks for select
+  using (auth.uid() = user_id);
+
+-- 公開済みブログの本文パーツは、パーツ自体のuser_id（=著者）ではなく
+-- 閲覧者が誰であっても読めるようにする。
+drop policy if exists "Anyone can view blocks of published blogs" on public.blog_blocks;
+create policy "Anyone can view blocks of published blogs"
+  on public.blog_blocks for select
+  using (
+    exists (
+      select 1 from public.blogs b
+      where b.id = blog_blocks.blog_id and b.status = 'published'
+    )
+  );
+
+drop policy if exists "Users can insert their own blog blocks" on public.blog_blocks;
+create policy "Users can insert their own blog blocks"
+  on public.blog_blocks for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own blog blocks" on public.blog_blocks;
+create policy "Users can update their own blog blocks"
+  on public.blog_blocks for update
+  using (auth.uid() = user_id);
+
+drop policy if exists "Users can delete their own blog blocks" on public.blog_blocks;
+create policy "Users can delete their own blog blocks"
+  on public.blog_blocks for delete
+  using (auth.uid() = user_id);
+
+-- ブログのサムネイル・画像パーツ・動画パーツのアップロード先。ファイルは
+-- `{auth.uid()}/...` の下に置く前提で、フォルダ名（先頭パス要素）が
+-- 自分のuser_idと一致する場合のみ読み書きできるようにする。バケット自体は
+-- public にしておき、保存後の公開URL（getPublicUrl）でそのまま表示する。
+insert into storage.buckets (id, name, public)
+values ('blog-media', 'blog-media', true)
+on conflict (id) do nothing;
+
+drop policy if exists "Anyone can view blog media" on storage.objects;
+create policy "Anyone can view blog media"
+  on storage.objects for select
+  using (bucket_id = 'blog-media');
+
+drop policy if exists "Users can upload their own blog media" on storage.objects;
+create policy "Users can upload their own blog media"
+  on storage.objects for insert
+  with check (bucket_id = 'blog-media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can update their own blog media" on storage.objects;
+create policy "Users can update their own blog media"
+  on storage.objects for update
+  using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+drop policy if exists "Users can delete their own blog media" on storage.objects;
+create policy "Users can delete their own blog media"
+  on storage.objects for delete
+  using (bucket_id = 'blog-media' and (storage.foldername(name))[1] = auth.uid()::text);
+
+-- ブロガーの公開プロフィール（/blogger/[userId]）用の表示名。auth.usersの
+-- メールアドレスをそのまま公開したくないため、任意で設定できる表示名だけを
+-- 別テーブルで持つ。未設定でもプロフィールページ自体は表示できる。
+create table if not exists public.profiles (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  display_name text,
+  created_at timestamptz not null default now()
+);
+
+-- プロフィールのタグ（例：東京／大阪）。エリアなど自由に増やせるよう、
+-- 選べる候補は`src/lib/constants.ts`のPROFILE_TAGSだけで管理し、DB側は
+-- ただの文字列配列として持つ（候補を増やしてもマイグレーション不要）。
+alter table public.profiles add column if not exists tags text[] not null default '{}';
+
+-- プロフィール画像（blog-mediaバケットへアップロードした公開URL）と、
+-- 任意で設定できるSNS・WebサイトのURL。すべて未設定でも表示に支障はない。
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists twitter_url text;
+alter table public.profiles add column if not exists instagram_url text;
+alter table public.profiles add column if not exists youtube_url text;
+alter table public.profiles add column if not exists website_url text;
+
+create index if not exists profiles_display_name_trgm_idx
+  on public.profiles using gin (display_name gin_trgm_ops);
+create index if not exists profiles_tags_idx on public.profiles using gin (tags);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "Anyone can view profiles" on public.profiles;
+create policy "Anyone can view profiles"
+  on public.profiles for select
+  using (true);
+
+drop policy if exists "Users can insert their own profile" on public.profiles;
+create policy "Users can insert their own profile"
+  on public.profiles for insert
+  with check (auth.uid() = user_id);
+
+drop policy if exists "Users can update their own profile" on public.profiles;
+create policy "Users can update their own profile"
+  on public.profiles for update
+  using (auth.uid() = user_id);
+
+-- ブロガー検索（/bloggers）。公開ブログを1件以上持つプロフィールだけを対象に、
+-- 表示名または（部分一致を含む）タグが検索語にマッチするものを返す。
+-- `language sql`（security definerではない）なので、呼び出したロールの
+-- RLSがそのまま適用される（profilesは誰でもSELECT可、blogsは
+-- status='published'のみ誰でもSELECT可という既存ポリシーに乗る）。
+create or replace function public.search_bloggers(search_query text default null)
+returns table (
+  user_id uuid,
+  display_name text,
+  tags text[],
+  avatar_url text,
+  twitter_url text,
+  instagram_url text,
+  youtube_url text,
+  website_url text
+)
+language sql
+stable
+as $$
+  select
+    p.user_id, p.display_name, p.tags,
+    p.avatar_url, p.twitter_url, p.instagram_url, p.youtube_url, p.website_url
+  from public.profiles p
+  where exists (
+    select 1 from public.blogs b
+    where b.user_id = p.user_id and b.status = 'published'
+  )
+  and (
+    search_query is null
+    or search_query = ''
+    or p.display_name ilike '%' || search_query || '%'
+    or exists (select 1 from unnest(p.tags) t where t ilike '%' || search_query || '%')
+  )
+  order by p.display_name nulls last;
+$$;
+
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が
 -- 反映されるまで "Could not find the table 'public.xxx' in the schema cache" を
 -- 返し続けることがあります。最後にリロードを通知して即座に反映させます。

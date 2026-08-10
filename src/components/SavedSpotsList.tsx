@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { getSavedSpots, removeSavedSpot } from "@/lib/storage";
 import { googleMapsUrl, youtubeWatchUrl } from "@/lib/links";
 import ShareButtons from "@/components/ShareButtons";
 import type { SavedSpot } from "@/lib/types";
 
-export default function MyPageContent() {
+/**
+ * 検索画面から保存した「行きたいリスト」の一覧。プラン作成時にここから
+ * スポットを組み込むため、プラン画面に併設して表示する。
+ */
+export default function SavedSpotsList() {
   const [spots, setSpots] = useState<SavedSpot[]>([]);
   const [status, setStatus] = useState<"loading" | "idle" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
@@ -47,20 +50,12 @@ export default function MyPageContent() {
       : "";
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold text-stone-800">マイページ</h1>
-          <p className="text-sm text-stone-500">
-            保存したスポットを一覧で確認し、当日のしおりとして使えます。
-          </p>
-        </div>
-        <Link
-          href="/mypage/plans"
-          className="rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700"
-        >
-          お出かけプランを作る
-        </Link>
+    <div className="flex flex-col gap-3">
+      <div>
+        <h2 className="text-lg font-bold text-stone-800">行きたいリスト</h2>
+        <p className="text-sm text-stone-500">
+          検索画面から保存したスポットです。プランに組み込んで、当日のしおりとして使えます。
+        </p>
       </div>
 
       {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}

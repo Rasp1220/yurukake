@@ -32,3 +32,36 @@ export interface PlanItem {
   dayNumber: number;
   sortOrder: number;
 }
+
+export type BlogStatus = "draft" | "published";
+
+export interface Blog {
+  id: string;
+  userId: string;
+  title: string;
+  thumbnailUrl: string | null;
+  status: BlogStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type BlogBlockType = "text" | "image" | "video";
+
+export interface BlogBlock {
+  id: string;
+  blogId: string;
+  type: BlogBlockType;
+  content: string;
+  sortOrder: number;
+}
+
+export interface Profile {
+  userId: string;
+  displayName: string | null;
+  tags: string[];
+  avatarUrl: string | null;
+  twitterUrl: string | null;
+  instagramUrl: string | null;
+  youtubeUrl: string | null;
+  websiteUrl: string | null;
+}

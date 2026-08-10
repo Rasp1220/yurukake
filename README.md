@@ -10,7 +10,7 @@ YouTubeの紹介動画からお出かけスポットを検索し、行きたい�
 - **スポット・キーワード検索**：エリア名やジャンルで検索
 - **SNS動画・情報連携**：YouTube Data API v3で関連動画を一覧表示
 - **ワンタップ「行きたいリスト」追加**：気になる動画をスポット情報・ジャンル付きで保存（ログインユーザーごとにSupabaseデータベースへ保存）
-- **マイページ一覧表示**：保存したスポットを一覧で確認
+- **マイページ一覧表示**：保存したスポットをプラン画面（`/mypage/plans`）の「行きたいリスト」で一覧確認
 
 ## 追加機能
 
@@ -18,6 +18,9 @@ YouTubeの紹介動画からお出かけスポットを検索し、行きたい�
 
 - **ジャンル・エリアフィルター**：検索結果をジャンルタグで絞り込み、ホーム画面のエリアを拡大表示
 - **お出かけプラン作成**：行きたいリストのスポットを「1日目」「2日目」のように日程へ組み込み、並び替え・移動が可能（マイページ→「お出かけプランを作る」）
+- **お出かけブログ作成**：タイトル・サムネイルに加えて、テキスト（TinyMCEのWYSIWYGエディター）・画像・動画のパーツを必要な分だけ好きな順番で追加できるブログ（マイページ→「お出かけブログを作る」）。既定は「下書き」で本人にしか見えず、「公開する」で初めて他のユーザーも閲覧可能になる。公開したブログは表示名・プロフィール画像・SNS（X／Instagram／YouTube／Webサイト、アイコン表示）リンク・タグ（一旦「東京」「大阪」）を設定できるブロガープロフィールページ（`/blogger/[userId]`）から一覧でき、ログイン不要で閲覧できる。プロフィールページには新着5件を横スクロールの一覧で表示し、「もっと見る」からそのブロガーの全ブログ一覧（`/blogger/[userId]/blogs`）に遷移できる
+- **ブロガー検索**：表示名またはタグで、公開ブログを持つブロガーを検索できるページ（`/bloggers`、ログイン不要）。ナビの「ブロガー」、マイページの「ブロガーを探す」から遷移
+- **マイページの3分割**：マイページ単体の画面は廃止し、「プロフィール」（`/mypage/profile`：表示名・画像・タグ・SNSリンクなど公開情報）「ブロガー情報」（`/mypage/account`：ログイン用メールアドレス・パスワードの変更、非公開）「プラン」（`/mypage/plans`：お出かけプラン＋行きたいリスト）の3つに分けた。ナビの「マイページ」はホバー／フォーカスでこの3つを選べ、そのまま押すとプロフィールへ遷移する（`/mypage`はリダイレクト）。ホバーできないタッチ端末でも移動できるよう、3ページ共通のタブ（`MyPageTabs`）も置いている。メール・パスワード変更はSupabase Authの`updateUser`を使用（メールアドレス変更は既定で新旧両方のアドレスへの確認メールが必要）
 - **おすすめ（レコメンド）**：保存スポットのジャンルや検索履歴の傾向から、ホーム画面に「あなたへのおすすめ」動画を表示
 - **SNSシェア**：行きたいリストやお出かけプランをX・LINEでシェア
 - **外部アプリへの導線**：スポットごとにGoogle Map・YouTube公式アプリへのリンクを表示
@@ -40,7 +43,7 @@ cp .env.example .env.local
 ### Supabaseプロジェクトの準備
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）
+2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`blogs`／`blog_blocks`／`profiles`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）。あわせて、ブログのサムネイル・画像・動画パーツのアップロード先として `blog-media` というPublicなStorageバケットとアクセスポリシーも同じスクリプトで作成されます。`blogs`は`status`列（既定'draft'）を持ち、`status='published'`の行だけ本人以外にもRLSで閲覧を許可する。`profiles`は表示名に加えて`tags`（text配列）・`avatar_url`（プロフィール画像、`blog-media`バケットへアップロード）・`twitter_url`／`instagram_url`／`youtube_url`／`website_url`（SNS・WebサイトのURL、すべて任意）を持ち、ブロガー検索用の`search_bloggers`関数もこのスクリプトで作成される
 3. Project Settings → API から `Project URL` と `anon public` キーを取得
 
 #### 「Could not find the table 'public.plans' in the schema cache」と出る場合
@@ -98,19 +101,33 @@ src/
   app/
     page.tsx              # ホーム画面（検索バー、おすすめ）
     search/                # 検索結果画面（ジャンルフィルター）
-    mypage/                # マイページ（保存リスト、要ログイン）
-      plans/                # お出かけプラン一覧・詳細（日程スケジュール）
+    mypage/                # /mypage/profile へのリダイレクトのみ（要ログイン）
+      plans/                # お出かけプラン一覧・詳細＋行きたいリスト（保存スポット）
+      blogs/                # お出かけブログ一覧・編集（タイトル／サムネイル／パーツ／公開設定）
+      profile/               # プロフィール編集（表示名・画像・タグ・SNSリンク、公開情報）
+      account/               # ブロガー情報（メールアドレス・パスワード変更、非公開）
+    blogger/[userId]/      # 公開ブロガープロフィール（新着5件を横スクロール表示、ログイン不要）
+      blogs/                # そのブロガーの公開ブログ全件一覧（プロフィールの「もっと見る」から）
+    blogs/[id]/            # 公開ブログ詳細（ログイン不要、status='published'のみ）
+    bloggers/               # ブロガー検索（表示名・タグ、ログイン不要）
     login/                  # ログイン画面
     signup/                 # 新規登録画面
     api/search/            # area_videosから抽出して返すだけのAPI（YouTubeは呼ばない）
     api/cron/fetch-area-videos/  # YouTube APIを呼んでarea_videosを埋めるバッチ
-  components/              # UIコンポーネント（ShareButtons, RecommendedSectionほか）
-  lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プランCRUD・レコメンドロジック
+  components/              # UIコンポーネント（ShareButtons, RecommendedSection, RichTextEditor（TinyMCE）, SnsIcon, BlogCardほか）
+  lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プラン／ブログCRUD・レコメンドロジック
     areaVideos.ts           # 動画プールの読み書き（サーバー専用）
     prefectures.ts          # 47都道府県リスト
+    constants.ts             # AREAS／GENRES／PROFILE_TAGSなどの固定候補リスト
+    blogs.ts                # ブログ／パーツのCRUD（本人用）とメディアアップロード（Supabase Storage）
+    publicBlogs.ts          # 公開ブログ／プロフィール／ブロガー検索の読み取り専用フェッチ（サーバー専用、未ログインでも動作）
+    profiles.ts             # 表示名・タグ・アバター・SNSリンク（プロフィール）の読み書き（本人用）
+    account.ts               # ログイン用メールアドレス・パスワードの変更（Supabase Auth）
   middleware.ts             # Supabaseセッションのリフレッシュ
+scripts/
+  copy-tinymce.js           # `npm install`後にTinyMCEをpublic/tinymceへセルフホスト用コピー（postinstall）
 supabase/
-  schema.sql               # spots／plans／plan_items／area_videos／area_fetch_progressテーブル定義とRLSポリシー
+  schema.sql               # spots／plans／plan_items／blogs／blog_blocks／profiles／area_videos／area_fetch_progressテーブル定義とRLSポリシー、blog-media Storageバケット
 .github/workflows/
   fetch-area-videos.yml    # バッチを毎日呼び出すGitHub Actions
 ```
