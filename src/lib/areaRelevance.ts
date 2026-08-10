@@ -1,5 +1,10 @@
 import { PREFECTURES, PREFECTURE_ALIASES, type Prefecture } from "./prefectures";
-import { IRRELEVANT_VIDEO_KEYWORDS, SPOT_RELEVANCE_KEYWORDS } from "./constants";
+import {
+  IRRELEVANT_VIDEO_CATEGORY_IDS,
+  IRRELEVANT_VIDEO_KEYWORDS,
+  SHORTS_MAX_DURATION_SECONDS,
+  SPOT_RELEVANCE_KEYWORDS,
+} from "./constants";
 
 /**
  * 動画が「本当にその都道府県の動画か」を判定する。
@@ -116,4 +121,60 @@ export function looksIrrelevantVideo(title: string, description: string): boolea
   if (!hasIrrelevantSignal) return false;
 
   return !looksLikeSpotVideo(title, description);
+}
+
+/** カテゴリIDが「おでかけスポットとして明らかに無関係」なものかどうか。 */
+export function isIrrelevantCategory(categoryId: number | null | undefined): boolean {
+  return categoryId != null && IRRELEVANT_VIDEO_CATEGORY_IDS.includes(categoryId);
+}
+
+/** YouTube Shorts（短尺動画）とみなす長さかどうか。 */
+export function isShortsDuration(durationSeconds: number | null | undefined): boolean {
+  return durationSeconds != null && durationSeconds > 0 && durationSeconds <= SHORTS_MAX_DURATION_SECONDS;
+}
+
+/**
+ * 点検が「なぜこの行を消すのか」。レスポンスにそのまま出して、消える理由の
+ * 内訳を目で確かめられるようにする。
+ * - `category`：YouTubeの動画カテゴリが音楽・ゲーム等（最も確実な根拠）
+ * - `channel`：人がチャンネルごと無関係だと判断した（`area_video_channel_blocklist`）
+ * - `shorts`：60秒以下の短尺動画（`?deleteShorts=true` のときだけ）
+ * - `keyword`：無関係キーワードに一致し、スポットらしい語には一致しない
+ */
+export type IrrelevanceReason = "category" | "channel" | "shorts" | "keyword";
+
+export interface IrrelevanceInput {
+  title: string;
+  description: string;
+  channelTitle: string;
+  categoryId: number | null;
+  durationSeconds: number | null;
+}
+
+export interface IrrelevanceOptions {
+  /** 人がチャンネルごと無関係だと判断したチャンネル名。 */
+  blockedChannels: ReadonlySet<string>;
+  /** 60秒以下の短尺動画も消すかどうか。既定は消さない。 */
+  deleteShorts: boolean;
+}
+
+/**
+ * 保存済みの行を消すべきか判定する。消す理由が無ければ `null` を返す。
+ *
+ * 最初の実装はタイトル・説明文のキーワードだけで判断していたが、どちらも
+ * 投稿者が自由に書いた文章なので推測にしかならず、誤検知が多かった。
+ * いまは判断材料の優先順位を「投稿者が固定の選択肢から選んだカテゴリ」
+ * →「人がチャンネル単位で下した判断」→「キーワード」の順にしてある。
+ * どの根拠にも当たらない行は消さずに残す（`cleanup-area-videos` が
+ * 「よその県だと確認できた行」だけを消すのと同じ考え方）。
+ */
+export function judgeIrrelevance(
+  video: IrrelevanceInput,
+  options: IrrelevanceOptions,
+): IrrelevanceReason | null {
+  if (isIrrelevantCategory(video.categoryId)) return "category";
+  if (options.blockedChannels.has(video.channelTitle)) return "channel";
+  if (options.deleteShorts && isShortsDuration(video.durationSeconds)) return "shorts";
+  if (looksIrrelevantVideo(video.title, video.description)) return "keyword";
+  return null;
 }

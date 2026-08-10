@@ -1,0 +1,31 @@
+name: Backfill video metadata
+
+# 保存済みの area_videos に、YouTubeの動画カテゴリ（音楽・ゲームなど）と
+# 動画の長さを後から埋める。無関係な動画の点検が、タイトルの文字列マッチ
+# ではなくカテゴリという確実な根拠で判断できるようにするための準備。
+#
+# YouTube APIを呼ぶが videos.list は50件/1ユニットなので極めて安い
+# （2,000件で40ユニット＝1日のクォータ10,000の0.4%）。
+# 何度実行してもまだ埋まっていない行だけを対象にするので安全。手動実行のみ。
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: "1回で補完する最大件数（既定2000）"
+        type: string
+        default: "2000"
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call backfill-video-metadata endpoint
+        run: |
+          status=$(curl -s -o response.json -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_BASE_URL }}/api/cron/backfill-video-metadata?limit=${{ inputs.limit }}")
+          echo "HTTP status: $status"
+          cat response.json
+          if [ "$status" -ge 300 ]; then
+            exit 1
+          fi

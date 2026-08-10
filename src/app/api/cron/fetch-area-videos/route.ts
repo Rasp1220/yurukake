@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { GENRES } from "@/lib/constants";
 import { PREFECTURES, type Prefecture } from "@/lib/prefectures";
-import { belongsToPrefecture, looksLikeSpotVideo } from "@/lib/areaRelevance";
+import { belongsToPrefecture, isIrrelevantCategory, looksLikeSpotVideo } from "@/lib/areaRelevance";
 import {
   getFetchProgressOrderedByStaleness,
+  listBlockedChannels,
   recordFetchProgress,
   upsertAreaVideos,
 } from "@/lib/areaVideos";
+import {
+  fetchVideoDetails,
+  VIDEOS_LIST_BATCH_SIZE,
+  VIDEOS_LIST_UNITS_PER_CALL,
+  YouTubeError,
+} from "@/lib/youtubeVideos";
 import type { VideoResult } from "@/lib/types";
 
 /**
@@ -27,13 +34,7 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 const YOUTUBE_SEARCH_URL = "https://www.googleapis.com/youtube/v3/search";
-const YOUTUBE_VIDEOS_URL = "https://www.googleapis.com/youtube/v3/videos";
 const UNITS_PER_CALL = 100;
-// videos.list（統計情報取得）は1回1ユニットとsearch.listよりずっと安いので、
-// トップページ・もっと見るページの再生数順表示のために毎回呼んでも
-// クォータへの影響はごくわずか。
-const VIDEOS_LIST_UNITS_PER_CALL = 1;
-const VIEW_COUNT_BATCH_SIZE = 50;
 // description はUIには表示せず検索のあいまい一致にしか使わないため、DB容量
 // 節約のため150文字に切り詰めて保存する（トライグラムインデックスのサイズにも効く）。
 const DESCRIPTION_MAX_LENGTH = 150;
@@ -48,15 +49,6 @@ const PAGES_FULL = 3;
 const PAGES_MAINTENANCE = 1;
 // ""=総合クエリ、それ以外はジャンルを混ぜたクエリ。
 const QUERY_VARIANTS: (string | null)[] = [null, ...GENRES];
-
-class YouTubeError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-  }
-}
 
 async function fetchPage(
   prefecture: Prefecture,
@@ -113,43 +105,14 @@ async function fetchPage(
   return { items, nextPageToken: data.nextPageToken };
 }
 
-/** videos.list（統計情報）で再生数をまとめて取得する。最大50件/回。 */
-async function fetchViewCounts(
-  videoIds: string[],
-  apiKey: string,
-): Promise<Map<string, number>> {
-  const viewCounts = new Map<string, number>();
-
-  for (let i = 0; i < videoIds.length; i += VIEW_COUNT_BATCH_SIZE) {
-    const batch = videoIds.slice(i, i + VIEW_COUNT_BATCH_SIZE);
-    const url = new URL(YOUTUBE_VIDEOS_URL);
-    url.searchParams.set("part", "statistics");
-    url.searchParams.set("id", batch.join(","));
-    url.searchParams.set("key", apiKey);
-
-    const res = await fetch(url.toString(), { cache: "no-store" });
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}));
-      throw new YouTubeError(
-        body?.error?.message ?? "YouTube動画情報の取得に失敗しました",
-        res.status,
-      );
-    }
-
-    const data = await res.json();
-    for (const item of data.items ?? []) {
-      const count = Number(item.statistics?.viewCount ?? 0);
-      viewCounts.set(item.id, Number.isFinite(count) ? count : 0);
-    }
-  }
-
-  return viewCounts;
-}
-
 interface PrefectureRunResult {
   prefecture: Prefecture;
   mode: "full" | "maintenance";
   videosUpserted: number;
+  /** カテゴリ（音楽・ゲーム等）を理由に取り込まなかった件数。 */
+  droppedByCategory: number;
+  /** ブロックしたチャンネルの動画なので取り込まなかった件数。 */
+  droppedByChannel: number;
   unitsUsedSoFar: number;
 }
 
@@ -181,6 +144,10 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  // 人が「無関係」と判断したチャンネル。取れなくても取り込み自体は続ける
+  // （その場合はチャンネル単位の除外が効かないだけ）。
+  const blockedChannels = await listBlockedChannels().catch(() => new Set<string>());
+
   const results: PrefectureRunResult[] = [];
   let unitsUsed = 0;
   let stoppedEarlyReason: string | null = null;
@@ -210,20 +177,46 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    let droppedByCategory = 0;
+    let droppedByChannel = 0;
+
     if (collected.size > 0) {
       try {
-        const viewCounts = await fetchViewCounts([...collected.keys()], apiKey);
-        unitsUsed +=
-          Math.ceil(collected.size / VIEW_COUNT_BATCH_SIZE) * VIDEOS_LIST_UNITS_PER_CALL;
+        const details = await fetchVideoDetails([...collected.keys()], apiKey);
+        unitsUsed += Math.ceil(collected.size / VIDEOS_LIST_BATCH_SIZE) * VIDEOS_LIST_UNITS_PER_CALL;
         for (const video of collected.values()) {
-          video.viewCount = viewCounts.get(video.videoId) ?? 0;
+          const detail = details.get(video.videoId);
+          video.viewCount = detail?.viewCount ?? 0;
+          video.categoryId = detail?.categoryId ?? null;
+          video.durationSeconds = detail?.durationSeconds ?? null;
+        }
+
+        // カテゴリが分かったので、ここで初めて「音楽動画・ゲーム実況」と
+        // 確実に判定できる。タイトル・説明文のキーワードと違って投稿者が
+        // 選んだ固定の選択肢なので、誤って弾く心配がない。
+        for (const [videoId, video] of collected) {
+          if (isIrrelevantCategory(video.categoryId)) {
+            collected.delete(videoId);
+            droppedByCategory++;
+          }
         }
       } catch {
-        // 再生数の取得に失敗しても動画自体（タイトル・サムネイル）の保存は
-        // 止めない。この場合 view_count は0のまま保存され、次回実行時の
-        // メンテナンス取得で再取得を試みる。
+        // 動画情報の取得に失敗しても動画自体（タイトル・サムネイル）の保存は
+        // 止めない。この場合 view_count は0、カテゴリ・長さは null のまま
+        // 保存され、次回のメンテナンス取得かバックフィルバッチで補完される。
       }
-      await upsertAreaVideos(progress.prefecture, [...collected.values()]);
+
+      // 人が「無関係」と判断済みのチャンネルは、再取得でも戻さない。
+      for (const [videoId, video] of collected) {
+        if (blockedChannels.has(video.channelTitle)) {
+          collected.delete(videoId);
+          droppedByChannel++;
+        }
+      }
+
+      if (collected.size > 0) {
+        await upsertAreaVideos(progress.prefecture, [...collected.values()]);
+      }
     }
     await recordFetchProgress(progress.prefecture);
 
@@ -231,6 +224,8 @@ export async function GET(request: NextRequest) {
       prefecture: progress.prefecture,
       mode,
       videosUpserted: collected.size,
+      droppedByCategory,
+      droppedByChannel,
       unitsUsedSoFar: unitsUsed,
     });
   }

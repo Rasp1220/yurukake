@@ -44,7 +44,7 @@ cp .env.example .env.local
 ### Supabaseプロジェクトの準備
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`blogs`／`blog_blocks`／`profiles`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）。あわせて、ブログのサムネイル・画像・動画パーツのアップロード先として `blog-media` というPublicなStorageバケットとアクセスポリシーも同じスクリプトで作成されます。`blogs`は`status`列（既定'draft'）を持ち、`status='published'`の行だけ本人以外にもRLSで閲覧を許可する。`profiles`は表示名に加えて`tags`（text配列）・`avatar_url`（プロフィール画像、`blog-media`バケットへアップロード）・`twitter_url`／`instagram_url`／`youtube_url`／`website_url`（SNS・WebサイトのURL、すべて任意）を持ち、「さがす」のブログ検索用の`search_blogs`関数もこのスクリプトで作成される
+2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`blogs`／`blog_blocks`／`profiles`／`area_videos`／`area_fetch_progress`／`area_video_channel_blocklist` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）。あわせて、ブログのサムネイル・画像・動画パーツのアップロード先として `blog-media` というPublicなStorageバケットとアクセスポリシーも同じスクリプトで作成されます。`blogs`は`status`列（既定'draft'）を持ち、`status='published'`の行だけ本人以外にもRLSで閲覧を許可する。`profiles`は表示名に加えて`tags`（text配列）・`avatar_url`（プロフィール画像、`blog-media`バケットへアップロード）・`twitter_url`／`instagram_url`／`youtube_url`／`website_url`（SNS・WebサイトのURL、すべて任意）を持ち、「さがす」のブログ検索用の`search_blogs`関数もこのスクリプトで作成される
 3. Project Settings → API から `Project URL` と `anon public` キーを取得
 
 #### 「Could not find the table 'public.plans' in the schema cache」と出る場合
@@ -61,7 +61,7 @@ SQL Editor はスクリプトを1つのトランザクションとして実行�
 
 | 変数名 | 用途 |
 | :--- | :--- |
-| `YOUTUBE_API_KEY` | YouTube Data API v3（バッチ `/api/cron/fetch-area-videos` のみで使用） |
+| `YOUTUBE_API_KEY` | YouTube Data API v3（バッチ `/api/cron/fetch-area-videos` と `/api/cron/backfill-video-metadata` のみで使用） |
 | `NEXT_PUBLIC_SUPABASE_URL` | SupabaseプロジェクトのURL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabaseのanon publicキー |
 | `SUPABASE_SERVICE_ROLE_KEY` | （任意）動画プールの書き込みをサーバー限定にしたい場合のみ |
@@ -83,7 +83,7 @@ npm run dev
 
 1. `/api/cron/fetch-area-videos`（`Authorization: Bearer $CRON_SECRET` で保護）が、都道府県を「未取得の主要都道府県（東京・大阪・愛知・神奈川・北海道・京都・福岡・沖縄を優先）→ 未取得のその他 → 取得済み（最終更新が古い順）」の順で処理する
 2. まだ一度も取得していない都道府県は「本格取得」（総合＋8ジャンルの9パターン×最大3ページ）、既に一度取得済みの都道府県は「新着チェックのみ」（9パターン×1ページ）にして、1回の実行で消費するクォータの上限（8,000ユニット）内に収める。クォータの都合上、1日に処理できるのはおおむね2〜3都道府県分
-3. 各動画の再生数は `videos.list`（1ユニット/回・最大50件バッチ）でまとめて取得し、`view_count` として保存する（トップページ・検索結果ページの並び替えに使う）
+3. 各動画の再生数は `videos.list`（1ユニット/回・最大50件バッチ）でまとめて取得し、`view_count` として保存する（トップページ・検索結果ページの並び替えに使う）。`videos.list` は `part` を増やしてもクォータ消費が変わらないため、同じ呼び出しで**追加コストなし**にYouTubeの動画カテゴリ（`category_id`。10=音楽、20=ゲームなど）と動画の長さ（`duration_seconds`）も取得して保存する。この2つは画面には出さず、無関係な動画の点検が「投稿者が固定の選択肢から選んだカテゴリ」という確実な根拠で判断できるようにするためのもの（`src/lib/youtubeVideos.ts`）。カテゴリが音楽・ゲーム等（`IRRELEVANT_VIDEO_CATEGORY_IDS`）の動画は、この時点で取り込み対象から外す
 4. YouTube検索は都道府県名・ジャンル語に緩くマッチした動画も返してくるため、タイトル・説明文が `SPOT_RELEVANCE_KEYWORDS`（`src/lib/constants.ts`。「お出かけ」「旅行」「観光」「スポット」など）のいずれも含まない動画は無関係とみなして取り込み対象から除外する
 5. **さらに「本当にその都道府県の動画か」も確認する**（`belongsToPrefecture`／`src/lib/areaRelevance.ts`）。例えば `北海道 グルメ スポット 紹介` の検索結果には「愛知で開催される北海道グルメイベント」「大須にできた北海道の人気クレープ店」のような“よその県の話”が混ざるため、タイトル（タイトルがどのエリアにも触れていなければ説明文）が名指ししているエリアがちょうど1つで、それが検索中の都道府県のときだけ取り込む。判定には県名だけでなく主要都市・エリア名（`PREFECTURE_ALIASES`／`src/lib/prefectures.ts`。「札幌」「梅田」「祇園」など）も使うので、県名を出さないタイトルも拾える
 6. 動画IDを主キーに upsert するので、同じ動画を何度取得しても行が増えることはない
@@ -112,9 +112,24 @@ npm run dev
   on conflict (video_id) do nothing;
   ```
 - 既定ではanonキーで書き込むため、`area_videos`／`area_fetch_progress` のポリシーは書き込みを許可しています。厳しくしたい場合は `SUPABASE_SERVICE_ROLE_KEY` を設定した上で、`supabase/schema.sql` のコメントに従って書き込みポリシーを削除してください
-- 上記4のキーワードチェック（`looksLikeSpotVideo`）も**これから取り込む動画にしか効きません**。それ以前に貯めた行（都道府県名・ジャンル語に緩くマッチしただけの家族vlogやドッキリ動画など、お出かけ・観光スポットと無関係な動画）を消すには、Actions タブ → "Cleanup irrelevant videos" → "Run workflow" から `/api/cron/cleanup-irrelevant-videos` を実行してください（YouTube APIは呼ばないのでクォータを消費しません）。都道府県が合っているかどうかは問わず、"Cleanup area videos"（都道府県違いの点検）とは別軸のチェックです
+- お出かけ・観光スポットと無関係な動画（音楽・ゲーム動画などが都道府県名・ジャンル語に緩くマッチして紛れ込んだもの）を消すには、Actions タブ → "Cleanup irrelevant videos" → "Run workflow" から `/api/cron/cleanup-irrelevant-videos` を実行してください（YouTube APIは呼ばないのでクォータを消費しません）。都道府県が合っているかどうかは問わず、"Cleanup area videos"（都道府県違いの点検）とは別軸のチェックです
 
-  **消す条件は取り込みの条件（`SPOT_RELEVANCE_KEYWORDS`の不在）の単純な否定ではありません。** 「スポットらしいキーワードが1つも無い」を無関係の根拠にすると、ジャンル語を使わない食レポ動画のような正当なスポット動画まで削除対象になってしまう（誤検知）ため、点検が消すのは`IRRELEVANT_VIDEO_KEYWORDS`（`src/lib/constants.ts`。「ドッキリ」「歌ってみた」「ゲーム実況」など明らかに無関係な言い回し）に一致し、かつスポットらしいキーワードには一致しない行だけです。判断できない行はそのまま残し、件数だけ `keptAsUnknown` として報告します。既定は点検のみのドライランで、`apply` にチェックを入れるまでは何も削除しません
+  **判断材料は優先順に3つあり、キーワードは補助でしかありません。**
+
+  1. **カテゴリ**（`category_id`）… 投稿者が固定の選択肢から選んだ構造化データなので、「カテゴリ10の動画は音楽動画であって旅行動画ではない」と言い切れる。点検の主な根拠
+  2. **チャンネル**（`area_video_channel_blocklist`）… 人が「このチャンネルは無関係」と判断したもの。YouTubeのノイズはチャンネル単位でまとまって入るため、1件ずつ判定するより確実で速い。**取り込み側も参照するので、一度消したチャンネルは再取得でも戻ってきません**
+  3. **キーワード**（`IRRELEVANT_VIDEO_KEYWORDS`）… 「ドッキリ」「歌ってみた」など明らかに無関係な言い回しに一致し、かつスポットらしいキーワードには一致しない行
+
+  当初はタイトル・説明文のキーワードだけで判断していましたが、「`SPOT_RELEVANCE_KEYWORDS` が1つも無い＝無関係」という条件は、ジャンル語を使わない食レポ動画のような正当なスポット動画まで削除対象にしてしまい誤検知が多発しました。どちらも投稿者が自由に書いた文章である以上、そこからの判定は推測にしかならないため、確実な根拠（カテゴリ・人の判断）を主にする形に改めています。どの根拠にも当たらない行はそのまま残し、件数だけ `keptAsUnknown` として報告します
+
+  実行の順番：
+
+  1. **`mode=inspect`** … 何も消さずに、テーブルの中身をカテゴリ別・チャンネル別に集計して返します。**まずこれで実データを見てから条件を決めてください**
+  2. **`mode=dry-run`** … いまの条件で消える行と、その理由の内訳（`irrelevantByReason`）を返します
+  3. **`mode=apply`** … 実際に削除します
+
+  `block_channel` にチャンネル名（カンマ区切り）を入れるとブロックリストに登録され、`delete_shorts` にチェックを入れると60秒以下の短尺動画も対象に含まれます（正当なスポット紹介Shortsもあるため既定では消しません）
+- 上記3のカテゴリ・動画の長さは**これから取り込む動画にしか付きません**。それ以前に貯めた行は空のままで点検の判断材料になりません。Actions タブ → "Backfill video metadata" → "Run workflow" から `/api/cron/backfill-video-metadata` を実行して補完してください。`videos.list` は50件/1ユニットなので極めて安く（2,000件で40ユニット＝1日のクォータの0.4%）、まだ埋まっていない行だけを対象にするので何度実行しても安全です。`remaining` が0になるまで繰り返し実行してください
 
 ## ディレクトリ構成
 
@@ -138,12 +153,14 @@ src/
     api/search/blogs/      # 公開ブログをタイトル検索して返すAPI
     api/cron/fetch-area-videos/  # YouTube APIを呼んでarea_videosを埋めるバッチ
     api/cron/cleanup-area-videos/ # 保存済みarea_videosを点検し、その都道府県の動画ではない行を消すバッチ（YouTubeは呼ばない）
-    api/cron/cleanup-irrelevant-videos/ # 保存済みarea_videosを点検し、お出かけ・観光スポットと無関係な行を消すバッチ（YouTubeは呼ばない）
+    api/cron/cleanup-irrelevant-videos/ # 保存済みarea_videosを点検し、お出かけ・観光スポットと無関係な行を消すバッチ（YouTubeは呼ばない。inspect/dry-run/applyの3モード）
+    api/cron/backfill-video-metadata/   # 保存済みarea_videosにYouTubeの動画カテゴリ・動画の長さを後から埋めるバッチ
   components/              # UIコンポーネント（ShareButtons, RecommendedSection, RichTextEditor（TinyMCE）, SnsIcon, BlogCard, BlogResultCard, HamburgerMenuほか）
   lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プラン／ブログCRUD・レコメンドロジック
     areaVideos.ts           # 動画プールの読み書き（サーバー専用）
     prefectures.ts          # 47都道府県リストと、都道府県ごとの主要都市・エリア名（PREFECTURE_ALIASES）
     areaRelevance.ts        # 取り込んだ動画が本当にその都道府県の動画か・お出かけスポットらしいかの判定（バッチと点検バッチで共用）
+    youtubeVideos.ts        # YouTube videos.list の呼び出し（再生数・動画カテゴリ・動画の長さ。取り込みとバックフィルで共用）
     constants.ts             # AREAS／GENRES／PROFILE_TAGSなどの固定候補リスト
     blogs.ts                # ブログ／パーツのCRUD（本人用）とメディアアップロード（Supabase Storage）
     publicBlogs.ts          # 公開ブログ／プロフィール／ブログ検索の読み取り専用フェッチ（サーバー専用、未ログインでも動作）
@@ -159,7 +176,8 @@ supabase/
 .github/workflows/
   fetch-area-videos.yml    # バッチを毎日呼び出すGitHub Actions
   cleanup-area-videos.yml  # 都道府県違いの点検バッチを手動実行するGitHub Actions（既定はドライラン）
-  cleanup-irrelevant-videos.yml # お出かけ・観光スポットと無関係な動画の点検バッチを手動実行するGitHub Actions（既定はドライラン）
+  cleanup-irrelevant-videos.yml # お出かけ・観光スポットと無関係な動画の点検バッチを手動実行するGitHub Actions（既定は集計のみのinspect）
+  backfill-video-metadata.yml   # 保存済み動画のカテゴリ・長さを補完するバッチを手動実行するGitHub Actions
 ```
 
 ## 今後の拡張（フェーズ2）
