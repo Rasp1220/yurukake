@@ -22,11 +22,25 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
         branding: false,
         language: "ja",
         language_url: "/tinymce/langs/ja.js",
-        plugins: ["lists", "link", "autolink"],
-        toolbar:
-          "undo redo | blocks | bold italic underline | bullist numlist | link | removeformat",
+        // 非エンジニアには「太字」「見出し」「URLを貼るとリンクになる」だけ
+        // 分かれば十分なため、装飾はあえて最小限にしている（autolinkでURLの
+        // 貼り付けは自動的にリンク化される）。
+        plugins: ["link", "autolink"],
+        toolbar: "undo redo | bold | h2 | link removeformat",
+        setup: (editor) => {
+          editor.ui.registry.addToggleButton("h2", {
+            icon: "header-2",
+            tooltip: "見出し",
+            onAction: () => editor.execCommand("mceToggleFormat", false, "h2"),
+            onSetup: (api) => {
+              const update = () => api.setActive(editor.formatter.match("h2"));
+              editor.on("NodeChange", update);
+              return () => editor.off("NodeChange", update);
+            },
+          });
+        },
         content_style:
-          "body { font-family: system-ui, sans-serif; font-size: 14px; color: #292524; }",
+          "body { font-family: system-ui, sans-serif; font-size: 14px; color: #292524; } h2 { font-size: 1.15em; font-weight: 700; }",
       }}
     />
   );

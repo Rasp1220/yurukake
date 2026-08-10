@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { getSavedSpots, removeSavedSpot } from "@/lib/storage";
 import { googleMapsUrl, youtubeWatchUrl } from "@/lib/links";
+import Alert from "@/components/Alert";
 import ShareButtons from "@/components/ShareButtons";
 import type { SavedSpot } from "@/lib/types";
 
@@ -58,7 +59,7 @@ export default function SavedSpotsList() {
         </p>
       </div>
 
-      {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <Alert>{errorMessage}</Alert>}
 
       {spots.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-orange-200 bg-orange-50 py-12 text-center text-stone-500">

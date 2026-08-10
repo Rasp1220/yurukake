@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBlog, deleteBlog, getBlogs } from "@/lib/blogs";
+import Alert from "@/components/Alert";
 import type { Blog } from "@/lib/types";
 
 const DEFAULT_BLOG_TITLE = "無題のブログ";
@@ -64,7 +65,7 @@ export default function BlogsListContent() {
         </p>
       </div>
 
-      {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <Alert>{errorMessage}</Alert>}
 
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-stone-800">ブログ一覧</h2>

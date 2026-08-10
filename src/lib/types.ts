@@ -60,13 +60,21 @@ export interface BlogBlock {
   sortOrder: number;
 }
 
+export interface ProfileLink {
+  label: string;
+  url: string;
+}
+
 export interface Profile {
   userId: string;
   displayName: string | null;
+  bio: string | null;
   tags: string[];
   avatarUrl: string | null;
-  twitterUrl: string | null;
-  instagramUrl: string | null;
-  youtubeUrl: string | null;
-  websiteUrl: string | null;
+  /** SNSのユーザー名（例: "neko"）。URLではない。 */
+  twitterUsername: string | null;
+  instagramUsername: string | null;
+  youtubeUsername: string | null;
+  /** 自由に設定できるWebサイト等へのリンク（最大 MAX_PROFILE_LINKS 件）。 */
+  links: ProfileLink[];
 }

@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
+import { Icon } from "@iconify/react";
+import Alert from "@/components/Alert";
+import { MAX_LENGTH } from "@/lib/constants";
 import {
   addBlogBlock,
   getBlog,
@@ -34,6 +37,17 @@ const BLOCK_LABELS: Record<BlogBlockType, string> = {
   image: "画像",
   video: "動画",
 };
+
+const BLOCK_ICONS: Record<BlogBlockType, string> = {
+  text: "mdi:text-box-outline",
+  image: "mdi:image-outline",
+  video: "mdi:video-outline",
+};
+
+/** タグを取り除いた大まかな文字数（TinyMCEはmaxlength属性を持たないため、保存前チェック用）。 */
+function plainTextLength(html: string): number {
+  return html.replace(/<[^>]*>/g, "").length;
+}
 
 export default function BlogEditContent({ blogId }: { blogId: string }) {
   const [blog, setBlog] = useState<Blog | null>(null);
@@ -176,6 +190,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
   async function handleTextSave(blockId: string) {
     const html = textDrafts[blockId];
     if (html === undefined) return;
+    if (plainTextLength(html) > MAX_LENGTH.LONG) return;
     setBusyBlockId(blockId);
     try {
       await updateBlogBlockContent(blockId, html);
@@ -235,7 +250,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
         <h1 className="text-2xl font-bold text-stone-800">{blog?.title}</h1>
       </div>
 
-      {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <Alert>{errorMessage}</Alert>}
 
       {blog && (
         <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
@@ -250,9 +265,10 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
               <Link
                 href={`/blogs/${blog.id}`}
                 target="_blank"
-                className="text-xs text-brand-600 hover:underline"
+                className="inline-flex items-center gap-1 text-xs text-brand-600 hover:underline"
               >
-                公開ページを見る ↗
+                公開ページを見る
+                <Icon icon="mdi:open-in-new" className="h-3.5 w-3.5" />
               </Link>
             )}
           </div>
@@ -278,6 +294,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
+            maxLength={MAX_LENGTH.SHORT}
             className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
           <button
@@ -291,7 +308,10 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
       </section>
 
       <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-semibold text-stone-800">サムネイル</h2>
+        <h2 className="mb-1 font-semibold text-stone-800">サムネイル</h2>
+        <p className="mb-3 text-xs text-stone-500">
+          一覧やSNSでの見え方を揃えるため、スマホ画面に近い比率（縦長なら1080×1920px、横長なら1920×1080px程度）での用意がおすすめです。アップロード時に自動でJPEG圧縮されます。
+        </p>
         {blog?.thumbnailUrl && (
           <div className="relative mb-3 h-40 w-full overflow-hidden rounded-xl bg-stone-100">
             <Image
@@ -330,136 +350,156 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
         </div>
       </section>
 
-      <section className="flex flex-col gap-4">
-        <h2 className="font-semibold text-stone-800">本文パーツ</h2>
+      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+        <h2 className="mb-1 font-semibold text-stone-800">本文パーツ</h2>
+        <p className="mb-4 text-xs text-stone-500">
+          テキスト・画像・動画のパーツを好きな順番で組み合わせて本文を作れます。↑↓で並び替え、削除ボタンで取り除けます。
+        </p>
 
         {blocks.length === 0 && (
-          <p className="rounded-2xl border border-dashed border-orange-200 bg-orange-50 py-8 text-center text-sm text-stone-500">
+          <p className="rounded-xl border border-dashed border-orange-200 bg-orange-50 py-8 text-center text-sm text-stone-500">
             下のボタンからテキストや画像・動画のパーツを追加しましょう。
           </p>
         )}
 
-        {blocks.map((block, index) => (
-          <div
-            key={block.id}
-            className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <span className="rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
-                {BLOCK_LABELS[block.type]}
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  disabled={index === 0}
-                  onClick={() => handleMove(index, -1)}
-                  className="rounded border border-stone-200 px-1.5 text-xs text-stone-500 hover:bg-stone-50 disabled:opacity-30"
-                >
-                  ↑
-                </button>
-                <button
-                  type="button"
-                  disabled={index === blocks.length - 1}
-                  onClick={() => handleMove(index, 1)}
-                  className="rounded border border-stone-200 px-1.5 text-xs text-stone-500 hover:bg-stone-50 disabled:opacity-30"
-                >
-                  ↓
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveBlock(block.id)}
-                  className="ml-2 text-xs text-stone-400 hover:text-red-500"
-                >
-                  削除
-                </button>
+        <div className="flex flex-col divide-y divide-orange-100">
+          {blocks.map((block, index) => (
+            <div key={block.id} className="py-4 first:pt-0 last:pb-0">
+              <div className="mb-3 flex items-center justify-between">
+                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                  <Icon icon={BLOCK_ICONS[block.type]} className="h-3.5 w-3.5" />
+                  {BLOCK_LABELS[block.type]}
+                </span>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    disabled={index === 0}
+                    onClick={() => handleMove(index, -1)}
+                    className="rounded border border-stone-200 px-1.5 text-xs text-stone-500 hover:bg-stone-50 disabled:opacity-30"
+                  >
+                    ↑
+                  </button>
+                  <button
+                    type="button"
+                    disabled={index === blocks.length - 1}
+                    onClick={() => handleMove(index, 1)}
+                    className="rounded border border-stone-200 px-1.5 text-xs text-stone-500 hover:bg-stone-50 disabled:opacity-30"
+                  >
+                    ↓
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveBlock(block.id)}
+                    className="ml-2 text-xs text-stone-400 hover:text-red-500"
+                  >
+                    削除
+                  </button>
+                </div>
               </div>
-            </div>
 
-            {block.type === "text" && (
-              <div className="flex flex-col gap-2">
-                <RichTextEditor
-                  value={textDrafts[block.id] ?? block.content}
-                  onChange={(html) =>
-                    setTextDrafts((current) => ({ ...current, [block.id]: html }))
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() => handleTextSave(block.id)}
-                  disabled={
-                    busyBlockId === block.id ||
-                    (textDrafts[block.id] ?? block.content) === block.content
-                  }
-                  className="self-end rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
-                >
-                  {busyBlockId === block.id ? "保存中..." : "テキストを保存"}
-                </button>
-              </div>
-            )}
+              {block.type === "text" && (
+                <div className="flex flex-col gap-2">
+                  <RichTextEditor
+                    value={textDrafts[block.id] ?? block.content}
+                    onChange={(html) =>
+                      setTextDrafts((current) => ({ ...current, [block.id]: html }))
+                    }
+                  />
+                  {(() => {
+                    const length = plainTextLength(textDrafts[block.id] ?? block.content);
+                    const overLimit = length > MAX_LENGTH.LONG;
+                    return (
+                      <div className="flex items-center justify-between">
+                        <p className={`text-xs ${overLimit ? "text-red-600" : "text-stone-400"}`}>
+                          {length}/{MAX_LENGTH.LONG}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={() => handleTextSave(block.id)}
+                          disabled={
+                            busyBlockId === block.id ||
+                            (textDrafts[block.id] ?? block.content) === block.content ||
+                            overLimit
+                          }
+                          className="rounded-full bg-brand-600 px-4 py-1.5 text-xs font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+                        >
+                          {busyBlockId === block.id ? "保存中..." : "テキストを保存"}
+                        </button>
+                      </div>
+                    );
+                  })()}
+                </div>
+              )}
 
-            {block.type === "image" && (
-              <div className="flex flex-col gap-2">
-                {block.content ? (
-                  <div className="relative h-56 w-full overflow-hidden rounded-xl bg-stone-100">
-                    <Image
+              {block.type === "image" && (
+                <div className="flex flex-col gap-2">
+                  {block.content ? (
+                    // 本文中の画像は一覧のサムネイルと違って統一比率にする
+                    // 必要が無いため、切り抜かずに元の縦横比のまま表示する
+                    // （縦長・横長どちらの写真も違和感なく収まるよう、高さの
+                    // 上限・下限だけを設けている）。
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
                       src={block.content}
                       alt=""
-                      fill
-                      sizes="480px"
-                      className="object-cover"
+                      loading="lazy"
+                      className="mx-auto min-h-[120px] max-h-[520px] w-full rounded-xl bg-stone-100 object-contain"
                     />
-                  </div>
-                ) : (
-                  <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
-                    画像が未設定です
-                  </p>
-                )}
-                <label className="cursor-pointer self-start rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
-                  {busyBlockId === block.id
-                    ? "アップロード中..."
-                    : block.content
-                      ? "画像を変更"
-                      : "画像を選択"}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={busyBlockId === block.id}
-                    onChange={(event) => handleMediaChange(block.id, event)}
-                  />
-                </label>
-              </div>
-            )}
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
+                      画像が未設定です
+                    </p>
+                  )}
+                  <label className="cursor-pointer self-start rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
+                    {busyBlockId === block.id
+                      ? "アップロード中..."
+                      : block.content
+                        ? "画像を変更"
+                        : "画像を選択"}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      disabled={busyBlockId === block.id}
+                      onChange={(event) => handleMediaChange(block.id, event)}
+                    />
+                  </label>
+                </div>
+              )}
 
-            {block.type === "video" && (
-              <div className="flex flex-col gap-2">
-                {block.content ? (
-                  <video src={block.content} controls className="w-full rounded-xl bg-black" />
-                ) : (
-                  <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
-                    動画が未設定です
+              {block.type === "video" && (
+                <div className="flex flex-col gap-2">
+                  {block.content ? (
+                    <video src={block.content} controls className="w-full rounded-xl bg-black" />
+                  ) : (
+                    <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
+                      動画が未設定です
+                    </p>
+                  )}
+                  <p className="text-xs text-stone-400">
+                    動画は容量が大きいと読み込みに時間がかかります。100MBを超えるファイルはアップロードできません。長い動画はYouTubeにアップロードし、動画パーツの代わりにテキストパーツへリンクを貼ることもご検討ください。
                   </p>
-                )}
-                <label className="cursor-pointer self-start rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
-                  {busyBlockId === block.id
-                    ? "アップロード中..."
-                    : block.content
-                      ? "動画を変更"
-                      : "動画を選択"}
-                  <input
-                    type="file"
-                    accept="video/*"
-                    className="hidden"
-                    disabled={busyBlockId === block.id}
-                    onChange={(event) => handleMediaChange(block.id, event)}
-                  />
-                </label>
-              </div>
-            )}
-          </div>
-        ))}
+                  <label className="cursor-pointer self-start rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
+                    {busyBlockId === block.id
+                      ? "アップロード中..."
+                      : block.content
+                        ? "動画を変更"
+                        : "動画を選択"}
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="hidden"
+                      disabled={busyBlockId === block.id}
+                      onChange={(event) => handleMediaChange(block.id, event)}
+                    />
+                  </label>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
 
-        <div className="flex flex-wrap gap-2">
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-orange-100 pt-4">
           <button
             type="button"
             onClick={() => handleAddBlock("text")}

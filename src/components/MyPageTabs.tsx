@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
-  { href: "/mypage/profile", label: "プロフィール" },
-  { href: "/mypage/account", label: "ブロガー情報" },
-  { href: "/mypage/plans", label: "プラン" },
+  { href: "/mypage/profile", label: "プロフィール編集" },
+  { href: "/mypage/account", label: "アカウント情報" },
+  { href: "/mypage/plans", label: "お出かけプラン" },
 ];
 
 /**
- * マイページ配下（プロフィール／ブロガー情報／プラン）の共通タブ。
+ * マイページ配下（プロフィール編集／アカウント情報／お出かけプラン）の共通タブ。
  * ナビの「マイページ」ホバーメニューはホバーできないタッチ端末では開けず、
  * タップするとプロフィールへ遷移するだけなので、このタブが無いと残り2つに
  * 到達できなくなる。

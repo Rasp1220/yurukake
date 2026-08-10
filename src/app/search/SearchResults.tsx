@@ -6,6 +6,7 @@ import VideoCard from "@/components/VideoCard";
 import BlogResultCard from "@/components/BlogResultCard";
 import SaveModal from "@/components/SaveModal";
 import Pagination from "@/components/Pagination";
+import Alert from "@/components/Alert";
 import { searchVideosWithTotal } from "@/lib/youtube";
 import { searchBlogs } from "@/lib/blogSearch";
 import { recordSearch } from "@/lib/searchHistory";
@@ -162,9 +163,9 @@ export default function SearchResults({ query }: { query: string }) {
       )}
 
       {savedMessage && (
-        <div className="rounded-xl bg-green-50 px-4 py-2 text-sm text-green-700">
+        <Alert variant="success">
           行きたいリストに追加しました！プラン画面から確認できます。
-        </div>
+        </Alert>
       )}
 
       {!query && (
@@ -177,13 +178,9 @@ export default function SearchResults({ query }: { query: string }) {
         <p className="py-12 text-center text-stone-400">検索中...</p>
       )}
 
-      {query && status === "error" && (
-        <p className="py-6 text-center text-red-500">{errorMessage}</p>
-      )}
+      {query && status === "error" && <Alert>{errorMessage}</Alert>}
 
-      {query && page === 1 && blogStatus === "error" && (
-        <p className="py-6 text-center text-red-500">{blogErrorMessage}</p>
-      )}
+      {query && page === 1 && blogStatus === "error" && <Alert>{blogErrorMessage}</Alert>}
 
       {nothingFound && (
         <p className="py-12 text-center text-stone-400">

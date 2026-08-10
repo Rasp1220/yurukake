@@ -47,9 +47,16 @@ export default async function PublicBlogPage({ params }: { params: { id: string 
               />
             )}
             {block.type === "image" && block.content && (
-              <div className="relative h-72 w-full overflow-hidden rounded-2xl bg-stone-100">
-                <Image src={block.content} alt="" fill sizes="720px" className="object-cover" />
-              </div>
+              // 本文中の画像は元の縦横比のまま表示する（切り抜かない）。縦長・
+              // 横長どちらの写真も違和感なく収まるよう、高さの上限・下限だけ
+              // 設けている。
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={block.content}
+                alt=""
+                loading="lazy"
+                className="mx-auto min-h-[160px] max-h-[720px] w-full rounded-2xl bg-stone-100 object-contain"
+              />
             )}
             {block.type === "video" && block.content && (
               <video src={block.content} controls className="w-full rounded-2xl bg-black" />

@@ -14,6 +14,7 @@ import {
 import { getSavedSpots } from "@/lib/storage";
 import { googleMapsUrl, youtubeWatchUrl } from "@/lib/links";
 import ShareButtons from "@/components/ShareButtons";
+import Alert from "@/components/Alert";
 import type { Plan, PlanItem, SavedSpot } from "@/lib/types";
 
 export default function PlanDetailContent({ planId }: { planId: string }) {
@@ -162,7 +163,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
         {plan && origin && <ShareButtons text={shareText} url={origin} />}
       </div>
 
-      {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <Alert>{errorMessage}</Alert>}
 
       <div className="flex flex-col gap-4">
         {Array.from({ length: dayCount }, (_, index) => index + 1).map((day) => (

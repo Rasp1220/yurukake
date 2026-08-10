@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Alert from "@/components/Alert";
 
 export default function LoginForm({ redirectTo }: { redirectTo: string }) {
   const router = useRouter();
@@ -54,6 +55,7 @@ export default function LoginForm({ redirectTo }: { redirectTo: string }) {
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            maxLength={255}
             className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
@@ -66,11 +68,12 @@ export default function LoginForm({ redirectTo }: { redirectTo: string }) {
             required
             value={password}
             onChange={(event) => setPassword(event.target.value)}
+            maxLength={128}
             className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
 
-        {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+        {status === "error" && <Alert>{errorMessage}</Alert>}
 
         <button
           type="submit"
