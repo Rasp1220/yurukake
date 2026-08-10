@@ -1,5 +1,5 @@
 import { PREFECTURES, PREFECTURE_ALIASES, type Prefecture } from "./prefectures";
-import { SPOT_RELEVANCE_KEYWORDS } from "./constants";
+import { IRRELEVANT_VIDEO_KEYWORDS, SPOT_RELEVANCE_KEYWORDS } from "./constants";
 
 /**
  * 動画が「本当にその都道府県の動画か」を判定する。
@@ -81,12 +81,39 @@ export function belongsToPrefecture(
 
 // YouTube検索は都道府県名やジャンル語が緩くマッチするだけで採用してしまうため、
 // タイトル・説明文が「お出かけ・旅行スポット紹介」らしい内容かをキーワードで
-// 判定し、無関係な動画（いたずら動画・日常vlog等）を弾く。取り込み
-// （`/api/cron/fetch-area-videos`）と、保存済みの行を点検する
-// `/api/cron/cleanup-irrelevant-videos` の両方で共用する。
+// 判定する。取り込み（`/api/cron/fetch-area-videos`）は「入れない」だけで
+// 何も失われないので、これで弾いて構わない。
 const lowerCaseSpotKeywords = SPOT_RELEVANCE_KEYWORDS.map((keyword) => keyword.toLowerCase());
 
 export function looksLikeSpotVideo(title: string, description: string): boolean {
   const haystack = `${title} ${description}`.toLowerCase();
   return lowerCaseSpotKeywords.some((keyword) => haystack.includes(keyword));
+}
+
+// 保存済みの行を点検する `/api/cron/cleanup-irrelevant-videos` 用。
+//
+// 最初の実装は `!looksLikeSpotVideo(...)`（＝スポットらしいキーワードが
+// 1つも無い）を削除条件にしていたが、これは「関連が確認できない」を
+// そのまま「無関係」とみなしてしまい、`SPOT_RELEVANCE_KEYWORDS` に
+// 載っている言い回しをたまたま使っていないだけの正当なスポット動画
+// （例：ジャンル語を使わない食レポ動画のタイトル）まで大量に削除対象に
+// してしまっていた（誤検知）。
+//
+// `judgeArea`（都道府県版の点検）が「よその県だと確認できた行」だけを
+// 消し、判断できない行はそのまま残すのと同じ考え方で、こちらも
+// 「無関係だと確認できた行」＝ `IRRELEVANT_VIDEO_KEYWORDS` に一致し、
+// かつスポットらしいキーワードには1つも一致しない行だけを削除対象にする。
+// 判断できない行（どちらのキーワードにも一致しない）は消さずに残す。
+const lowerCaseIrrelevantKeywords = IRRELEVANT_VIDEO_KEYWORDS.map((keyword) =>
+  keyword.toLowerCase(),
+);
+
+export function looksIrrelevantVideo(title: string, description: string): boolean {
+  const haystack = `${title} ${description}`.toLowerCase();
+  const hasIrrelevantSignal = lowerCaseIrrelevantKeywords.some((keyword) =>
+    haystack.includes(keyword),
+  );
+  if (!hasIrrelevantSignal) return false;
+
+  return !looksLikeSpotVideo(title, description);
 }

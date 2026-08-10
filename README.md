@@ -112,7 +112,9 @@ npm run dev
   on conflict (video_id) do nothing;
   ```
 - 既定ではanonキーで書き込むため、`area_videos`／`area_fetch_progress` のポリシーは書き込みを許可しています。厳しくしたい場合は `SUPABASE_SERVICE_ROLE_KEY` を設定した上で、`supabase/schema.sql` のコメントに従って書き込みポリシーを削除してください
-- 上記4のキーワードチェック（`looksLikeSpotVideo`）も**これから取り込む動画にしか効きません**。それ以前に貯めた行（都道府県名・ジャンル語に緩くマッチしただけの家族vlogやドッキリ動画など、お出かけ・観光スポットと無関係な動画）を消すには、Actions タブ → "Cleanup irrelevant videos" → "Run workflow" から `/api/cron/cleanup-irrelevant-videos` を実行してください（YouTube APIは呼ばないのでクォータを消費しません）。都道府県が合っているかどうかは問わず、タイトル・説明文に「お出かけ」「旅行」「観光」「スポット」などのキーワード（`SPOT_RELEVANCE_KEYWORDS`）が一つも無い行だけを対象にするので、"Cleanup area videos"（都道府県違いの点検）とは別軸のチェックです。こちらも既定は点検のみのドライランで、`apply` にチェックを入れるまでは何も削除しません
+- 上記4のキーワードチェック（`looksLikeSpotVideo`）も**これから取り込む動画にしか効きません**。それ以前に貯めた行（都道府県名・ジャンル語に緩くマッチしただけの家族vlogやドッキリ動画など、お出かけ・観光スポットと無関係な動画）を消すには、Actions タブ → "Cleanup irrelevant videos" → "Run workflow" から `/api/cron/cleanup-irrelevant-videos` を実行してください（YouTube APIは呼ばないのでクォータを消費しません）。都道府県が合っているかどうかは問わず、"Cleanup area videos"（都道府県違いの点検）とは別軸のチェックです
+
+  **消す条件は取り込みの条件（`SPOT_RELEVANCE_KEYWORDS`の不在）の単純な否定ではありません。** 「スポットらしいキーワードが1つも無い」を無関係の根拠にすると、ジャンル語を使わない食レポ動画のような正当なスポット動画まで削除対象になってしまう（誤検知）ため、点検が消すのは`IRRELEVANT_VIDEO_KEYWORDS`（`src/lib/constants.ts`。「ドッキリ」「歌ってみた」「ゲーム実況」など明らかに無関係な言い回し）に一致し、かつスポットらしいキーワードには一致しない行だけです。判断できない行はそのまま残し、件数だけ `keptAsUnknown` として報告します。既定は点検のみのドライランで、`apply` にチェックを入れるまでは何も削除しません
 
 ## ディレクトリ構成
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { looksLikeSpotVideo } from "@/lib/areaRelevance";
+import { looksIrrelevantVideo } from "@/lib/areaRelevance";
 import {
   deleteAreaVideos,
   listAreaVideoPage,
@@ -16,6 +16,15 @@ import {
  * ドッキリ動画などが都道府県名・ジャンル語に緩くマッチして紛れ込んだもの）
  * はこのエンドポイントで掃除する。都道府県が合っているかどうかは問わない
  * （それは `/api/cron/cleanup-area-videos` の役目）。
+ *
+ * 削除の条件は取り込みの条件（`looksLikeSpotVideo`）の単純な否定ではない。
+ * 「スポットらしいキーワードが1つも無い」を無関係とみなすと、ジャンル語を
+ * 使わない食レポ動画のような正当なスポット動画まで削除対象になってしまう
+ * （誤検知）。`cleanup-area-videos` が「よその県だと確認できた行」だけを
+ * 消すのと同じ考え方で、こちらも `looksIrrelevantVideo`（＝いたずら動画・
+ * 歌ってみた等の無関係キーワードに一致し、かつスポットらしいキーワードには
+ * 一致しない）で「無関係だと確認できた行」だけを消す。判断できない行は
+ * そのまま残し、件数だけ `keptAsUnknown` として報告する。
  *
  * YouTube APIは呼ばない（クォータを消費しない）。既定は点検だけの
  * ドライラン。実際に削除するときだけ `?apply=true` を付ける。
@@ -44,6 +53,9 @@ export async function GET(request: NextRequest) {
   const irrelevant: StoredAreaVideo[] = [];
   const irrelevantByPrefecture = new Map<string, number>();
   let scanned = 0;
+  // 判断できずに残した行（無関係キーワード・スポットキーワードのどちら
+  // にも一致しない動画）。消さないが、件数だけ報告する。
+  let keptAsUnknown = 0;
 
   try {
     for (let offset = 0; ; offset += PAGE_SIZE) {
@@ -51,7 +63,10 @@ export async function GET(request: NextRequest) {
       scanned += page.length;
 
       for (const video of page) {
-        if (looksLikeSpotVideo(video.title, video.description)) continue;
+        if (!looksIrrelevantVideo(video.title, video.description)) {
+          keptAsUnknown++;
+          continue;
+        }
 
         irrelevant.push(video);
         irrelevantByPrefecture.set(
@@ -82,6 +97,7 @@ export async function GET(request: NextRequest) {
     applied: apply,
     scanned,
     irrelevantCount: irrelevant.length,
+    keptAsUnknown,
     irrelevantByPrefecture: Object.fromEntries(
       [...irrelevantByPrefecture.entries()].sort((a, b) => b[1] - a[1]),
     ),
