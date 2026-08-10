@@ -31,7 +31,7 @@ export default async function BloggerBlogsPage({
           まだ公開されているブログがありません。
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {blogs.map((blog) => (
             <BlogCard key={blog.id} blog={blog} />
           ))}

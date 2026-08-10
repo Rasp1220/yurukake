@@ -84,51 +84,51 @@ export default function BlogsListContent() {
           まだブログがありません。上のボタンから作成してみましょう。
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        // 「さがす」のBlogResultCardと見た目（サムネイル上・情報下）を揃えている。
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
           {blogs.map((blog) => (
             <div
               key={blog.id}
-              className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
-              <Link
-                href={`/mypage/blogs/${blog.id}`}
-                className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100"
-              >
-                {blog.thumbnailUrl && (
-                  <Image
-                    src={blog.thumbnailUrl}
-                    alt={blog.title}
-                    fill
-                    sizes="96px"
-                    className="object-cover"
-                  />
-                )}
-              </Link>
-              <Link href={`/mypage/blogs/${blog.id}`} className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <p className="truncate font-semibold text-stone-800 hover:text-brand-600">
-                    {blog.title}
-                  </p>
+              <Link href={`/mypage/blogs/${blog.id}`} className="block">
+                <div className="relative aspect-video w-full overflow-hidden bg-stone-100">
+                  {blog.thumbnailUrl && (
+                    <Image
+                      src={blog.thumbnailUrl}
+                      alt={blog.title}
+                      fill
+                      sizes="(max-width: 640px) 50vw, 33vw"
+                      className="object-cover transition group-hover:scale-105"
+                    />
+                  )}
                   <span
                     className={
                       blog.status === "published"
-                        ? "flex-shrink-0 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700"
-                        : "flex-shrink-0 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500"
+                        ? "absolute right-2 top-2 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700"
+                        : "absolute right-2 top-2 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500"
                     }
                   >
                     {blog.status === "published" ? "公開中" : "下書き"}
                   </span>
                 </div>
-                <p className="text-xs text-stone-400">
-                  {new Date(blog.createdAt).toLocaleDateString("ja-JP")} 作成
-                </p>
+                <div className="flex flex-col gap-1 p-3">
+                  <p className="line-clamp-2 text-sm font-semibold text-stone-800">
+                    {blog.title}
+                  </p>
+                  <p className="text-xs text-stone-400">
+                    {new Date(blog.createdAt).toLocaleDateString("ja-JP")} 作成
+                  </p>
+                </div>
               </Link>
-              <button
-                onClick={() => handleDelete(blog.id)}
-                className="flex-shrink-0 text-xs text-stone-400 hover:text-red-500"
-              >
-                削除
-              </button>
+              <div className="flex justify-end border-t border-orange-50 px-3 py-2">
+                <button
+                  onClick={() => handleDelete(blog.id)}
+                  className="text-xs text-stone-400 hover:text-red-500"
+                >
+                  削除
+                </button>
+              </div>
             </div>
           ))}
         </div>
