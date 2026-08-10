@@ -1,4 +1,4 @@
-import Logo from "@/components/Logo";
+import Image from "next/image";
 import VideoSlider from "@/components/VideoSlider";
 import RecommendedSection from "@/components/RecommendedSection";
 import { AREAS } from "@/lib/constants";
@@ -6,7 +6,14 @@ import { AREAS } from "@/lib/constants";
 export default function HomePage() {
   return (
     <div className="flex flex-col gap-10 py-4">
-      <Logo className="mx-auto w-full max-w-md" />
+      <Image
+        src="/images/logo-top.png"
+        alt="ゆるっとおでかけ"
+        width={1774}
+        height={887}
+        priority
+        className="mx-auto w-full max-w-md"
+      />
 
       <div className="space-y-2 text-center">
         <h1 className="text-2xl font-bold text-stone-800 sm:text-3xl">
