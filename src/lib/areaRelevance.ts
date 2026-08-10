@@ -90,9 +90,13 @@ export function belongsToPrefecture(
 // 何も失われないので、これで弾いて構わない。
 const lowerCaseSpotKeywords = SPOT_RELEVANCE_KEYWORDS.map((keyword) => keyword.toLowerCase());
 
-export function looksLikeSpotVideo(title: string, description: string): boolean {
-  const haystack = `${title} ${description}`.toLowerCase();
+function hasSpotKeyword(text: string): boolean {
+  const haystack = text.toLowerCase();
   return lowerCaseSpotKeywords.some((keyword) => haystack.includes(keyword));
+}
+
+export function looksLikeSpotVideo(title: string, description: string): boolean {
+  return hasSpotKeyword(title) || hasSpotKeyword(description);
 }
 
 // 保存済みの行を点検する `/api/cron/cleanup-irrelevant-videos` 用。
@@ -113,13 +117,25 @@ const lowerCaseIrrelevantKeywords = IRRELEVANT_VIDEO_KEYWORDS.map((keyword) =>
   keyword.toLowerCase(),
 );
 
-export function looksIrrelevantVideo(title: string, description: string): boolean {
-  const haystack = `${title} ${description}`.toLowerCase();
-  const hasIrrelevantSignal = lowerCaseIrrelevantKeywords.some((keyword) =>
-    haystack.includes(keyword),
-  );
-  if (!hasIrrelevantSignal) return false;
+function hasIrrelevantKeyword(text: string): boolean {
+  const haystack = text.toLowerCase();
+  return lowerCaseIrrelevantKeywords.some((keyword) => haystack.includes(keyword));
+}
 
+export function looksIrrelevantVideo(title: string, description: string): boolean {
+  // 無関係キーワードはタイトルだけで判定する。説明文はチャンネル共通の
+  // 定型文（「旅行やグルメを紹介しています」等）が入っていることが多く、
+  // 動画本体（例：「アメが出てくるキャンディ銃で襲ってみた…#ドッキリ」）
+  // とは無関係な内容であることが珍しくないため、説明文にまで無関係
+  // キーワードを探すと誤検知（例えば定型文中の「ドッキリ企画は行いません」
+  // のような否定文）を拾いかねない。無関係だと言い切るにはタイトル自体に
+  // その言い回しがあることを要求する。
+  if (!hasIrrelevantKeyword(title)) return false;
+
+  // 一方、「本当はスポット紹介である」ことを示す救済判定はタイトル・説明文の
+  // どちらにあってもよい（`looksLikeSpotVideo` は据え置き）。タイトルに
+  // 無関係キーワードがあっても、同じタイトルか説明文にスポットらしい語が
+  // あれば紹介動画側の企画と判断し、消さない。
   return !looksLikeSpotVideo(title, description);
 }
 
