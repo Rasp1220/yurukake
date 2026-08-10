@@ -129,7 +129,10 @@ export async function searchBlogs(query: string, genre?: string | null): Promise
     search_genre: genre?.trim() || null,
   });
 
-  if (error) throw new Error("ブログの検索に失敗しました");
+  if (error) {
+    console.error("searchBlogs failed:", error);
+    throw new Error("ブログの検索に失敗しました");
+  }
   return (data as BlogSearchRow[]).map(blogSearchResultFromRow);
 }
 
