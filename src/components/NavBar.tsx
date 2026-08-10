@@ -58,10 +58,7 @@ export default async function NavBar() {
             </Link>
           )}
           {user ? (
-            <>
-              <span className="hidden text-stone-400 sm:inline">{user.email}</span>
-              <LogoutButton />
-            </>
+            <LogoutButton />
           ) : (
             <Link
               href="/signup"
