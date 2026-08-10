@@ -313,13 +313,13 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
           一覧やSNSでの見え方を揃えるため、スマホ画面に近い比率（縦長なら1080×1920px、横長なら1920×1080px程度）での用意がおすすめです。アップロード時に自動でJPEG圧縮されます。
         </p>
         {blog?.thumbnailUrl && (
-          <div className="relative mb-3 h-40 w-full overflow-hidden rounded-xl bg-stone-100">
+          <div className="relative mb-3 h-64 w-full overflow-hidden rounded-xl bg-stone-100">
             <Image
               src={blog.thumbnailUrl}
               alt={blog.title}
               fill
               sizes="480px"
-              className="object-cover"
+              className="object-contain"
             />
           </div>
         )}
