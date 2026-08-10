@@ -32,7 +32,7 @@ export default async function PublicBlogPage({ params }: { params: { id: string 
             alt={blog.title}
             fill
             sizes="720px"
-            className="object-cover"
+            className="object-contain"
           />
         </div>
       )}

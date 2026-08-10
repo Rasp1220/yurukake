@@ -100,7 +100,7 @@ export default function BlogsListContent() {
                     alt={blog.title}
                     fill
                     sizes="96px"
-                    className="object-cover"
+                    className="object-contain"
                   />
                 )}
               </Link>

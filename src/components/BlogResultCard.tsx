@@ -17,7 +17,7 @@ export default function BlogResultCard({ blog }: { blog: BlogSearchResult }) {
             alt={blog.title}
             fill
             sizes="(max-width: 640px) 100vw, 33vw"
-            className="object-cover transition group-hover:scale-105"
+            className="object-contain transition group-hover:scale-105"
           />
         )}
       </div>
