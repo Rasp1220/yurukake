@@ -61,10 +61,11 @@ function toVideoResult(row: AreaVideoRow): VideoResult {
 export type AreaVideoSort = "random" | "view_count" | "published_at";
 
 /**
- * 都道府県名と完全一致すればその都道府県に絞り込み、一致しなければ
- * タイトル・説明文をあいまい検索する（`supabase/schema.sql` の
- * `search_area_videos` 関数）。ジャンルが指定されていれば、それも同様に
- * タイトル・説明文で絞り込む。
+ * 都道府県名、または主要都市・エリア名（「札幌」「名古屋」など。
+ * `resolve_prefecture_query`／`supabase/schema.sql`）に一致すればその
+ * 都道府県に絞り込み、どちらにも一致しなければタイトル・説明文をあいまい
+ * 検索する（`search_area_videos` 関数）。ジャンルが指定されていれば、
+ * それも同様にタイトル・説明文で絞り込む。
  *
  * ジャンルで絞り込んだ結果が0件の場合、ジャンル無しで再検索して
  * 「何も出ない」より「ジャンルは外れるが候補は出す」を優先する。
