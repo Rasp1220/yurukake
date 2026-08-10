@@ -13,7 +13,7 @@ export default function VideoCard({
   return (
     <button
       onClick={() => onOpen(video)}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative aspect-video w-full overflow-hidden bg-stone-100">
         <Image

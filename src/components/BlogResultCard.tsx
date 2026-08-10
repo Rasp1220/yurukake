@@ -8,7 +8,7 @@ export default function BlogResultCard({ blog }: { blog: BlogSearchResult }) {
   return (
     <Link
       href={`/blogs/${blog.id}`}
-      className="group flex flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
       <div className="relative aspect-video w-full overflow-hidden bg-stone-100">
         {blog.thumbnailUrl && (
