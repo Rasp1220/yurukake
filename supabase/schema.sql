@@ -423,6 +423,14 @@ create table if not exists public.profiles (
 -- ただの文字列配列として持つ（候補を増やしてもマイグレーション不要）。
 alter table public.profiles add column if not exists tags text[] not null default '{}';
 
+-- プロフィール画像（blog-mediaバケットへアップロードした公開URL）と、
+-- 任意で設定できるSNS・WebサイトのURL。すべて未設定でも表示に支障はない。
+alter table public.profiles add column if not exists avatar_url text;
+alter table public.profiles add column if not exists twitter_url text;
+alter table public.profiles add column if not exists instagram_url text;
+alter table public.profiles add column if not exists youtube_url text;
+alter table public.profiles add column if not exists website_url text;
+
 create index if not exists profiles_display_name_trgm_idx
   on public.profiles using gin (display_name gin_trgm_ops);
 create index if not exists profiles_tags_idx on public.profiles using gin (tags);
@@ -450,11 +458,22 @@ create policy "Users can update their own profile"
 -- RLSがそのまま適用される（profilesは誰でもSELECT可、blogsは
 -- status='published'のみ誰でもSELECT可という既存ポリシーに乗る）。
 create or replace function public.search_bloggers(search_query text default null)
-returns table (user_id uuid, display_name text, tags text[])
+returns table (
+  user_id uuid,
+  display_name text,
+  tags text[],
+  avatar_url text,
+  twitter_url text,
+  instagram_url text,
+  youtube_url text,
+  website_url text
+)
 language sql
 stable
 as $$
-  select p.user_id, p.display_name, p.tags
+  select
+    p.user_id, p.display_name, p.tags,
+    p.avatar_url, p.twitter_url, p.instagram_url, p.youtube_url, p.website_url
   from public.profiles p
   where exists (
     select 1 from public.blogs b

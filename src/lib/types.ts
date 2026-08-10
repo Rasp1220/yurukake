@@ -59,4 +59,9 @@ export interface Profile {
   userId: string;
   displayName: string | null;
   tags: string[];
+  avatarUrl: string | null;
+  twitterUrl: string | null;
+  instagramUrl: string | null;
+  youtubeUrl: string | null;
+  websiteUrl: string | null;
 }

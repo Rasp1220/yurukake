@@ -23,12 +23,26 @@ interface ProfileRow {
   user_id: string;
   display_name: string | null;
   tags: string[];
+  avatar_url: string | null;
+  twitter_url: string | null;
+  instagram_url: string | null;
+  youtube_url: string | null;
+  website_url: string | null;
 }
 
-interface BloggerSearchRow {
-  user_id: string;
-  display_name: string | null;
-  tags: string[];
+type BloggerSearchRow = ProfileRow;
+
+function profileFromRow(userId: string, row: ProfileRow | null): Profile {
+  return {
+    userId,
+    displayName: row?.display_name ?? null,
+    tags: row?.tags ?? [],
+    avatarUrl: row?.avatar_url ?? null,
+    twitterUrl: row?.twitter_url ?? null,
+    instagramUrl: row?.instagram_url ?? null,
+    youtubeUrl: row?.youtube_url ?? null,
+    websiteUrl: row?.website_url ?? null,
+  };
 }
 
 function blogFromRow(row: BlogRow): Blog {
@@ -63,8 +77,7 @@ export async function getProfile(userId: string): Promise<Profile> {
     .maybeSingle();
 
   if (error) throw new Error("プロフィールの読み込みに失敗しました");
-  const row = data as ProfileRow | null;
-  return { userId, displayName: row?.display_name ?? null, tags: row?.tags ?? [] };
+  return profileFromRow(userId, data as ProfileRow | null);
 }
 
 /** 表示名またはタグが検索語にマッチする、公開ブログを持つブロガーを返す。 */
@@ -75,11 +88,7 @@ export async function searchBloggers(query: string): Promise<Profile[]> {
   });
 
   if (error) throw new Error("ブロガーの検索に失敗しました");
-  return (data as BloggerSearchRow[]).map((row) => ({
-    userId: row.user_id,
-    displayName: row.display_name,
-    tags: row.tags ?? [],
-  }));
+  return (data as BloggerSearchRow[]).map((row) => profileFromRow(row.user_id, row));
 }
 
 /** そのユーザーが公開設定にしたブログだけを一覧で返す（RLSで下書きは除外される）。 */

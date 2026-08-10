@@ -8,15 +8,37 @@ export default async function BloggerPage({ params }: { params: { userId: string
     getPublishedBlogs(params.userId),
   ]);
 
+  const snsLinks = [
+    { label: "X", url: profile.twitterUrl },
+    { label: "Instagram", url: profile.instagramUrl },
+    { label: "YouTube", url: profile.youtubeUrl },
+    { label: "Web", url: profile.websiteUrl },
+  ].filter((link): link is { label: string; url: string } => Boolean(link.url));
+
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-stone-800">
-          {profile.displayName || "ブロガー"}さんのブログ
-        </h1>
-        <p className="text-sm text-stone-500">公開されているお出かけブログの一覧です。</p>
+      <div className="flex flex-col items-center gap-3 rounded-2xl border border-orange-100 bg-white p-6 text-center shadow-sm">
+        <div className="relative h-24 w-24 overflow-hidden rounded-full bg-stone-100 ring-4 ring-orange-50">
+          {profile.avatarUrl && (
+            <Image
+              src={profile.avatarUrl}
+              alt={profile.displayName ?? "ブロガー"}
+              fill
+              sizes="96px"
+              className="object-cover"
+            />
+          )}
+        </div>
+
+        <div>
+          <h1 className="text-xl font-bold text-stone-800">
+            {profile.displayName || "ブロガー"}
+          </h1>
+          <p className="text-sm text-stone-500">公開されているお出かけブログの一覧です。</p>
+        </div>
+
         {profile.tags.length > 0 && (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="flex flex-wrap justify-center gap-1">
             {profile.tags.map((tag) => (
               <span
                 key={tag}
@@ -24,6 +46,22 @@ export default async function BloggerPage({ params }: { params: { userId: string
               >
                 {tag}
               </span>
+            ))}
+          </div>
+        )}
+
+        {snsLinks.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2">
+            {snsLinks.map((link) => (
+              <a
+                key={link.label}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="rounded-full border border-orange-200 px-3 py-1 text-xs font-medium text-brand-600 hover:bg-orange-50"
+              >
+                {link.label}
+              </a>
             ))}
           </div>
         )}

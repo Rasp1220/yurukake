@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PROFILE_TAGS } from "@/lib/constants";
@@ -84,21 +85,36 @@ export default function BloggerSearchResults({
             <Link
               key={blogger.userId}
               href={`/blogger/${blogger.userId}`}
-              className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm hover:border-brand-300"
+              className="flex items-center gap-3 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm hover:border-brand-300"
             >
-              <p className="font-semibold text-stone-800">{blogger.displayName || "ブロガー"}</p>
-              {blogger.tags.length > 0 && (
-                <div className="mt-2 flex flex-wrap gap-1">
-                  {blogger.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-brand-700"
-                    >
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              )}
+              <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-full bg-stone-100">
+                {blogger.avatarUrl && (
+                  <Image
+                    src={blogger.avatarUrl}
+                    alt=""
+                    fill
+                    sizes="48px"
+                    className="object-cover"
+                  />
+                )}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate font-semibold text-stone-800">
+                  {blogger.displayName || "ブロガー"}
+                </p>
+                {blogger.tags.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {blogger.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-brand-700"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
             </Link>
           ))}
         </div>

@@ -18,7 +18,7 @@ YouTubeの紹介動画からお出かけスポットを検索し、行きたい�
 
 - **ジャンル・エリアフィルター**：検索結果をジャンルタグで絞り込み、ホーム画面のエリアを拡大表示
 - **お出かけプラン作成**：行きたいリストのスポットを「1日目」「2日目」のように日程へ組み込み、並び替え・移動が可能（マイページ→「お出かけプランを作る」）
-- **お出かけブログ作成**：タイトル・サムネイルに加えて、テキスト（TinyMCEのWYSIWYGエディター）・画像・動画のパーツを必要な分だけ好きな順番で追加できるブログ（マイページ→「お出かけブログを作る」）。既定は「下書き」で本人にしか見えず、「公開する」で初めて他のユーザーも閲覧可能になる。公開したブログは表示名とタグ（一旦「東京」「大阪」）を設定できるブロガープロフィールページ（`/blogger/[userId]`）から一覧でき、ログイン不要で閲覧できる
+- **お出かけブログ作成**：タイトル・サムネイルに加えて、テキスト（TinyMCEのWYSIWYGエディター）・画像・動画のパーツを必要な分だけ好きな順番で追加できるブログ（マイページ→「お出かけブログを作る」）。既定は「下書き」で本人にしか見えず、「公開する」で初めて他のユーザーも閲覧可能になる。公開したブログは表示名・プロフィール画像・SNS（X／Instagram／YouTube／Webサイト）リンク・タグ（一旦「東京」「大阪」）を設定できるブロガープロフィールページ（`/blogger/[userId]`）から一覧でき、ログイン不要で閲覧できる
 - **ブロガー検索**：表示名またはタグで、公開ブログを持つブロガーを検索できるページ（`/bloggers`、ログイン不要）。ナビの「ブロガー」、マイページの「ブロガーを探す」から遷移
 - **おすすめ（レコメンド）**：保存スポットのジャンルや検索履歴の傾向から、ホーム画面に「あなたへのおすすめ」動画を表示
 - **SNSシェア**：行きたいリストやお出かけプランをX・LINEでシェア
@@ -42,7 +42,7 @@ cp .env.example .env.local
 ### Supabaseプロジェクトの準備
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`blogs`／`blog_blocks`／`profiles`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）。あわせて、ブログのサムネイル・画像・動画パーツのアップロード先として `blog-media` というPublicなStorageバケットとアクセスポリシーも同じスクリプトで作成されます。`blogs`は`status`列（既定'draft'）を持ち、`status='published'`の行だけ本人以外にもRLSで閲覧を許可する。`profiles`は表示名に加えて`tags`（text配列）を持ち、ブロガー検索用の`search_bloggers`関数もこのスクリプトで作成される
+2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`blogs`／`blog_blocks`／`profiles`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）。あわせて、ブログのサムネイル・画像・動画パーツのアップロード先として `blog-media` というPublicなStorageバケットとアクセスポリシーも同じスクリプトで作成されます。`blogs`は`status`列（既定'draft'）を持ち、`status='published'`の行だけ本人以外にもRLSで閲覧を許可する。`profiles`は表示名に加えて`tags`（text配列）・`avatar_url`（プロフィール画像、`blog-media`バケットへアップロード）・`twitter_url`／`instagram_url`／`youtube_url`／`website_url`（SNS・WebサイトのURL、すべて任意）を持ち、ブロガー検索用の`search_bloggers`関数もこのスクリプトで作成される
 3. Project Settings → API から `Project URL` と `anon public` キーを取得
 
 #### 「Could not find the table 'public.plans' in the schema cache」と出る場合

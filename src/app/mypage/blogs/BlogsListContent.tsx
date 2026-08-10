@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBlog, deleteBlog, getBlogs } from "@/lib/blogs";
 import { PROFILE_TAGS } from "@/lib/constants";
-import { getMyProfile, updateMyProfile } from "@/lib/profiles";
+import { getMyProfile, updateMyAvatar, updateMyProfile, uploadAvatar } from "@/lib/profiles";
 import type { Blog, Profile } from "@/lib/types";
 
 export default function BlogsListContent() {
@@ -20,7 +20,12 @@ export default function BlogsListContent() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [tags, setTags] = useState<string[]>([]);
+  const [twitterUrl, setTwitterUrl] = useState("");
+  const [instagramUrl, setInstagramUrl] = useState("");
+  const [youtubeUrl, setYoutubeUrl] = useState("");
+  const [websiteUrl, setWebsiteUrl] = useState("");
   const [savingProfile, setSavingProfile] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
 
   async function load() {
     try {
@@ -29,6 +34,10 @@ export default function BlogsListContent() {
       setProfile(profileData);
       setDisplayName(profileData.displayName ?? "");
       setTags(profileData.tags);
+      setTwitterUrl(profileData.twitterUrl ?? "");
+      setInstagramUrl(profileData.instagramUrl ?? "");
+      setYoutubeUrl(profileData.youtubeUrl ?? "");
+      setWebsiteUrl(profileData.websiteUrl ?? "");
       setStatus("idle");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "読み込みに失敗しました");
@@ -49,19 +58,47 @@ export default function BlogsListContent() {
   const profileDirty =
     displayName.trim() !== (profile?.displayName ?? "") ||
     tags.length !== (profile?.tags.length ?? 0) ||
-    tags.some((tag) => !profile?.tags.includes(tag));
+    tags.some((tag) => !profile?.tags.includes(tag)) ||
+    twitterUrl.trim() !== (profile?.twitterUrl ?? "") ||
+    instagramUrl.trim() !== (profile?.instagramUrl ?? "") ||
+    youtubeUrl.trim() !== (profile?.youtubeUrl ?? "") ||
+    websiteUrl.trim() !== (profile?.websiteUrl ?? "");
 
   async function handleProfileSave(event: React.FormEvent) {
     event.preventDefault();
     setSavingProfile(true);
     try {
-      const updated = await updateMyProfile({ displayName: displayName.trim(), tags });
+      const updated = await updateMyProfile({
+        displayName: displayName.trim(),
+        tags,
+        twitterUrl: twitterUrl.trim(),
+        instagramUrl: instagramUrl.trim(),
+        youtubeUrl: youtubeUrl.trim(),
+        websiteUrl: websiteUrl.trim(),
+      });
       setProfile(updated);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "プロフィールの更新に失敗しました");
       setStatus("error");
     } finally {
       setSavingProfile(false);
+    }
+  }
+
+  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setAvatarUploading(true);
+    try {
+      const url = await uploadAvatar(file);
+      const updated = await updateMyAvatar(url);
+      setProfile(updated);
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "プロフィール画像の更新に失敗しました");
+      setStatus("error");
+    } finally {
+      setAvatarUploading(false);
     }
   }
 
@@ -109,6 +146,23 @@ export default function BlogsListContent() {
         <p className="mb-3 text-xs text-stone-500">
           ここで設定した表示名で、公開したブログの一覧ページに名前が出ます。
         </p>
+        <div className="mb-3 flex items-center gap-3">
+          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-stone-100">
+            {profile?.avatarUrl && (
+              <Image src={profile.avatarUrl} alt="" fill sizes="64px" className="object-cover" />
+            )}
+          </div>
+          <label className="cursor-pointer rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
+            {avatarUploading ? "アップロード中..." : profile?.avatarUrl ? "画像を変更" : "画像を選択"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={avatarUploading}
+              onChange={handleAvatarChange}
+            />
+          </label>
+        </div>
         <form onSubmit={handleProfileSave} className="flex flex-col gap-3">
           <input
             type="text"
@@ -132,6 +186,36 @@ export default function BlogsListContent() {
                 {tag}
               </button>
             ))}
+          </div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input
+              type="url"
+              value={twitterUrl}
+              onChange={(event) => setTwitterUrl(event.target.value)}
+              placeholder="X（Twitter）のURL"
+              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
+            <input
+              type="url"
+              value={instagramUrl}
+              onChange={(event) => setInstagramUrl(event.target.value)}
+              placeholder="InstagramのURL"
+              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
+            <input
+              type="url"
+              value={youtubeUrl}
+              onChange={(event) => setYoutubeUrl(event.target.value)}
+              placeholder="YouTubeのURL"
+              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
+            <input
+              type="url"
+              value={websiteUrl}
+              onChange={(event) => setWebsiteUrl(event.target.value)}
+              placeholder="WebサイトのURL"
+              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
           </div>
           <button
             type="submit"
