@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import MyPageTabs from "@/components/MyPageTabs";
 import { getCurrentEmail, updateAccountEmail, updateAccountPassword } from "@/lib/account";
 
 export default function AccountContent() {
@@ -81,6 +82,8 @@ export default function AccountContent() {
 
   return (
     <div className="flex flex-col gap-6">
+      <MyPageTabs />
+
       <div>
         <h1 className="text-2xl font-bold text-stone-800">ブロガー情報</h1>
         <p className="text-sm text-stone-500">

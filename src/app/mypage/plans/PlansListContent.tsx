@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { createPlan, deletePlan, getPlans } from "@/lib/plans";
+import MyPageTabs from "@/components/MyPageTabs";
+import SavedSpotsList from "@/components/SavedSpotsList";
 import type { Plan } from "@/lib/types";
 
 export default function PlansListContent() {
@@ -57,6 +59,8 @@ export default function PlansListContent() {
 
   return (
     <div className="flex flex-col gap-6">
+      <MyPageTabs />
+
       <div>
         <h1 className="text-2xl font-bold text-stone-800">お出かけプラン</h1>
         <p className="text-sm text-stone-500">
@@ -110,6 +114,10 @@ export default function PlansListContent() {
           ))}
         </div>
       )}
+
+      <hr className="border-orange-100" />
+
+      <SavedSpotsList />
     </div>
   );
 }

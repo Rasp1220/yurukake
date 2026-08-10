@@ -23,14 +23,15 @@ export default async function NavBar() {
           </Link>
           <div className="group relative">
             <Link
-              href={user ? "/mypage" : "/login"}
+              href={user ? "/mypage/profile" : "/login"}
               className="inline-block hover:text-brand-600"
             >
               {user ? "マイページ" : "ログイン"}
             </Link>
             {user && (
               // ホバーに加えてフォーカス（キーボード操作）でも開くようにする。
-              // タッチ端末ではホバーが無いため、/mypage 側にも同じ導線を置いている。
+              // タッチ端末ではホバーが無く、タップするとプロフィールへ遷移する
+              // だけなので、各ページ側の MyPageTabs から残りへ移動できる。
               <div className="invisible absolute left-1/2 top-full z-30 -translate-x-1/2 pt-2 opacity-0 transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
                 <div className="w-36 rounded-xl border border-orange-100 bg-white p-1 shadow-lg">
                   <Link
@@ -45,15 +46,16 @@ export default async function NavBar() {
                   >
                     ブロガー情報
                   </Link>
+                  <Link
+                    href="/mypage/plans"
+                    className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
+                  >
+                    プラン
+                  </Link>
                 </div>
               </div>
             )}
           </div>
-          {user && (
-            <Link href="/mypage/plans" className="hover:text-brand-600">
-              プラン
-            </Link>
-          )}
           {user && (
             <Link href="/mypage/blogs" className="hover:text-brand-600">
               ブログ

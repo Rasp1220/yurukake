@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import MyPageTabs from "@/components/MyPageTabs";
 import { PROFILE_TAGS } from "@/lib/constants";
 import { getMyProfile, updateMyAvatar, updateMyProfile, uploadAvatar } from "@/lib/profiles";
 import type { Profile } from "@/lib/types";
@@ -99,6 +100,8 @@ export default function ProfileContent() {
 
   return (
     <div className="flex flex-col gap-6">
+      <MyPageTabs />
+
       <div>
         <h1 className="text-2xl font-bold text-stone-800">プロフィール</h1>
         <p className="text-sm text-stone-500">

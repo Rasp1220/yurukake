@@ -1,16 +1,7 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
-import MyPageContent from "./MyPageContent";
 
-export default async function MyPage() {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login?redirectedFrom=/mypage");
-  }
-
-  return <MyPageContent />;
+// マイページ単体の画面は廃止し、プロフィール・ブロガー情報・プランの3つに
+// 分割した。ナビの「マイページ」もここへ来るため、既定でプロフィールへ送る。
+export default function MyPage() {
+  redirect("/mypage/profile");
 }
