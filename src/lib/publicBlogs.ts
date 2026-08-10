@@ -92,14 +92,17 @@ export async function searchBloggers(query: string): Promise<Profile[]> {
 }
 
 /** そのユーザーが公開設定にしたブログだけを一覧で返す（RLSで下書きは除外される）。 */
-export async function getPublishedBlogs(userId: string): Promise<Blog[]> {
+export async function getPublishedBlogs(userId: string, limit?: number): Promise<Blog[]> {
   const supabase = createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("blogs")
     .select("*")
     .eq("user_id", userId)
     .eq("status", "published")
     .order("created_at", { ascending: false });
+  if (limit !== undefined) query = query.limit(limit);
+
+  const { data, error } = await query;
 
   if (error) throw new Error("ブログの読み込みに失敗しました");
   return (data as BlogRow[]).map(blogFromRow);

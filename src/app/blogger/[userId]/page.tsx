@@ -1,12 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
+import BlogCard from "@/components/BlogCard";
 import SnsIcon, { type SnsPlatform } from "@/components/SnsIcon";
 import { getProfile, getPublishedBlogs } from "@/lib/publicBlogs";
+
+const LATEST_BLOG_COUNT = 5;
 
 export default async function BloggerPage({ params }: { params: { userId: string } }) {
   const [profile, blogs] = await Promise.all([
     getProfile(params.userId),
-    getPublishedBlogs(params.userId),
+    getPublishedBlogs(params.userId, LATEST_BLOG_COUNT),
   ]);
 
   const snsLinks = [
@@ -77,32 +80,21 @@ export default async function BloggerPage({ params }: { params: { userId: string
           まだ公開されているブログがありません。
         </p>
       ) : (
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          {blogs.map((blog) => (
-            <Link
-              key={blog.id}
-              href={`/blogs/${blog.id}`}
-              className="flex gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm hover:border-brand-300"
-            >
-              <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
-                {blog.thumbnailUrl && (
-                  <Image
-                    src={blog.thumbnailUrl}
-                    alt={blog.title}
-                    fill
-                    sizes="96px"
-                    className="object-cover"
-                  />
-                )}
+        <div className="flex flex-col items-center gap-4">
+          <h2 className="self-start text-lg font-bold text-stone-800">新着ブログ</h2>
+          <div className="-mx-4 flex w-full snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">
+            {blogs.map((blog) => (
+              <div key={blog.id} className="w-64 flex-shrink-0 snap-start">
+                <BlogCard blog={blog} />
               </div>
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold text-stone-800">{blog.title}</p>
-                <p className="text-xs text-stone-400">
-                  {new Date(blog.createdAt).toLocaleDateString("ja-JP")}
-                </p>
-              </div>
-            </Link>
-          ))}
+            ))}
+          </div>
+          <Link
+            href={`/blogger/${params.userId}/blogs`}
+            className="rounded-full border border-orange-300 px-5 py-2 text-sm font-semibold text-brand-600 hover:bg-orange-50"
+          >
+            もっと見る
+          </Link>
         </div>
       )}
     </div>
