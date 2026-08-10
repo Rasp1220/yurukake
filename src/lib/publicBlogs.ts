@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Blog, BlogBlock, BlogBlockType, BlogStatus, Profile } from "./types";
+import type { Blog, BlogBlock, BlogBlockType, BlogSearchResult, BlogStatus, Profile } from "./types";
 
 interface BlogRow {
   id: string;
@@ -30,7 +30,15 @@ interface ProfileRow {
   website_url: string | null;
 }
 
-type BloggerSearchRow = ProfileRow;
+interface BlogSearchRow {
+  id: string;
+  user_id: string;
+  title: string;
+  thumbnail_url: string | null;
+  created_at: string;
+  updated_at: string;
+  author_display_name: string | null;
+}
 
 function profileFromRow(userId: string, row: ProfileRow | null): Profile {
   return {
@@ -67,6 +75,19 @@ function blogBlockFromRow(row: BlogBlockRow): BlogBlock {
   };
 }
 
+function blogSearchResultFromRow(row: BlogSearchRow): BlogSearchResult {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    title: row.title,
+    thumbnailUrl: row.thumbnail_url,
+    status: "published",
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    authorDisplayName: row.author_display_name,
+  };
+}
+
 /** 未ログインでも見られる、そのユーザーの公開プロフィール（表示名）。 */
 export async function getProfile(userId: string): Promise<Profile> {
   const supabase = createClient();
@@ -80,15 +101,15 @@ export async function getProfile(userId: string): Promise<Profile> {
   return profileFromRow(userId, data as ProfileRow | null);
 }
 
-/** 表示名またはタグが検索語にマッチする、公開ブログを持つブロガーを返す。 */
-export async function searchBloggers(query: string): Promise<Profile[]> {
+/** 「さがす」の横断検索用。タイトルが検索語にマッチする公開済みブログを返す。 */
+export async function searchBlogs(query: string): Promise<BlogSearchResult[]> {
   const supabase = createClient();
-  const { data, error } = await supabase.rpc("search_bloggers", {
+  const { data, error } = await supabase.rpc("search_blogs", {
     search_query: query.trim(),
   });
 
-  if (error) throw new Error("ブロガーの検索に失敗しました");
-  return (data as BloggerSearchRow[]).map((row) => profileFromRow(row.user_id, row));
+  if (error) throw new Error("ブログの検索に失敗しました");
+  return (data as BlogSearchRow[]).map(blogSearchResultFromRow);
 }
 
 /** そのユーザーが公開設定にしたブログだけを一覧で返す（RLSで下書きは除外される）。 */

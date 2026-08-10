@@ -168,6 +168,8 @@ create index if not exists area_videos_prefecture_view_count_idx
   on public.area_videos (prefecture, view_count desc);
 create index if not exists area_videos_title_trgm_idx on public.area_videos using gin (title gin_trgm_ops);
 create index if not exists area_videos_description_trgm_idx on public.area_videos using gin (description gin_trgm_ops);
+-- 「さがす」の公開日時順ソート・「新着おでかけスポット」で使う。
+create index if not exists area_videos_published_at_idx on public.area_videos (published_at desc);
 
 -- description はUIに表示せず検索のあいまい一致にしか使わないため、DB容量節約の
 -- ため150文字に切り詰めて保存する運用にした。バッチ（fetch-area-videos）は
@@ -258,6 +260,7 @@ as $$
     )
   order by
     case when sort_by = 'view_count' then view_count end desc nulls last,
+    case when sort_by = 'published_at' then published_at end desc nulls last,
     case when sort_by = 'random' then random() end
   limit result_limit
   offset result_offset;
@@ -461,40 +464,112 @@ create policy "Users can update their own profile"
   on public.profiles for update
   using (auth.uid() = user_id);
 
--- ブロガー検索（/bloggers）。公開ブログを1件以上持つプロフィールだけを対象に、
--- 表示名または（部分一致を含む）タグが検索語にマッチするものを返す。
--- `language sql`（security definerではない）なので、呼び出したロールの
--- RLSがそのまま適用される（profilesは誰でもSELECT可、blogsは
--- status='published'のみ誰でもSELECT可という既存ポリシーに乗る）。
-create or replace function public.search_bloggers(search_query text default null)
+-- 「さがす」（/search）にブログ検索を統合するため、ブロガー（人）を表示名・
+-- タグで探す専用の検索機能は廃止する（旧`search_bloggers`関数）。
+drop function if exists public.search_bloggers(text);
+
+-- ブログ検索（/search に統合、YouTube動画検索と並行して呼び出す）。公開済み
+-- (status='published')のブログをタイトルの部分一致で検索する。本文
+-- （blog_blocksのcontent）はTinyMCEのHTMLで、全文検索するとタグ由来の
+-- ノイズが多いため、まずはタイトルのみを検索対象にする。
+create index if not exists blogs_title_trgm_idx
+  on public.blogs using gin (title gin_trgm_ops);
+
+create or replace function public.search_blogs(
+  search_query text default null,
+  result_limit integer default 24
+)
 returns table (
+  id uuid,
   user_id uuid,
-  display_name text,
-  tags text[],
-  avatar_url text,
-  twitter_url text,
-  instagram_url text,
-  youtube_url text,
-  website_url text
+  title text,
+  thumbnail_url text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  author_display_name text
 )
 language sql
 stable
 as $$
   select
-    p.user_id, p.display_name, p.tags,
-    p.avatar_url, p.twitter_url, p.instagram_url, p.youtube_url, p.website_url
-  from public.profiles p
-  where exists (
-    select 1 from public.blogs b
-    where b.user_id = p.user_id and b.status = 'published'
-  )
-  and (
-    search_query is null
-    or search_query = ''
-    or p.display_name ilike '%' || search_query || '%'
-    or exists (select 1 from unnest(p.tags) t where t ilike '%' || search_query || '%')
-  )
-  order by p.display_name nulls last;
+    b.id, b.user_id, b.title, b.thumbnail_url, b.created_at, b.updated_at,
+    p.display_name as author_display_name
+  from public.blogs b
+  left join public.profiles p on p.user_id = b.user_id
+  where b.status = 'published'
+    and (
+      search_query is null
+      or search_query = ''
+      or b.title ilike '%' || search_query || '%'
+    )
+  order by b.created_at desc
+  limit result_limit;
+$$;
+
+-- ハンバーガーメニューの「新着おでかけスポット」「YouTube」「ブログ」で使う。
+-- YouTube動画（area_videos）と公開ブログ（blogs）を1つの結果としてUNIONし、
+-- 公開日時の降順でページングできるようにする。spot_kindで'video'/'blog'に
+-- 絞り込める（nullなら両方）。
+create index if not exists blogs_created_at_idx on public.blogs (created_at desc);
+
+create or replace function public.search_recent_spots(
+  spot_kind text default null,
+  result_limit integer default 24,
+  result_offset integer default 0
+)
+returns table (
+  kind text,
+  id text,
+  title text,
+  thumbnail_url text,
+  channel_title text,
+  published_at timestamptz
+)
+language sql
+stable
+as $$
+  select kind, id, title, thumbnail_url, channel_title, published_at
+  from (
+    select
+      'video'::text as kind,
+      av.video_id as id,
+      av.title,
+      av.thumbnail_url,
+      av.channel_title,
+      av.published_at
+    from public.area_videos av
+    where spot_kind is null or spot_kind = 'video'
+
+    union all
+
+    select
+      'blog'::text as kind,
+      b.id::text as id,
+      b.title,
+      b.thumbnail_url,
+      null::text as channel_title,
+      b.created_at as published_at
+    from public.blogs b
+    where b.status = 'published'
+      and (spot_kind is null or spot_kind = 'blog')
+  ) combined
+  order by published_at desc nulls last
+  limit result_limit
+  offset result_offset;
+$$;
+
+-- search_recent_spots と同じ絞り込み条件を再利用する。
+create or replace function public.count_recent_spots(spot_kind text default null)
+returns integer
+language sql
+stable
+as $$
+  select (
+    (select count(*) from public.area_videos where spot_kind is null or spot_kind = 'video')
+    +
+    (select count(*) from public.blogs
+     where status = 'published' and (spot_kind is null or spot_kind = 'blog'))
+  )::integer;
 $$;
 
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が

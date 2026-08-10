@@ -45,6 +45,11 @@ export interface Blog {
   updatedAt: string;
 }
 
+/** 「さがす」の横断検索でヒットしたブログ（著者の表示名つき）。 */
+export interface BlogSearchResult extends Blog {
+  authorDisplayName: string | null;
+}
+
 export type BlogBlockType = "text" | "image" | "video";
 
 export interface BlogBlock {

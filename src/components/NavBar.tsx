@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import HamburgerMenu from "./HamburgerMenu";
 import LogoutButton from "./LogoutButton";
 
 export default async function NavBar() {
@@ -11,15 +12,15 @@ export default async function NavBar() {
   return (
     <header className="sticky top-0 z-20 border-b border-orange-100 bg-white/90 backdrop-blur">
       <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-        <Link href="/" className="text-lg font-bold text-brand-600">
-          ゆるかけ
-        </Link>
+        <div className="flex items-center gap-1">
+          <HamburgerMenu />
+          <Link href="/" className="text-lg font-bold text-brand-600">
+            ゆるかけ
+          </Link>
+        </div>
         <nav className="flex items-center gap-4 text-sm font-medium text-stone-600">
           <Link href="/search" className="hover:text-brand-600">
             さがす
-          </Link>
-          <Link href="/bloggers" className="hover:text-brand-600">
-            ブロガー
           </Link>
           <div className="group relative">
             <Link
