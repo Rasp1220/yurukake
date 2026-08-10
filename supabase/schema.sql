@@ -461,40 +461,46 @@ create policy "Users can update their own profile"
   on public.profiles for update
   using (auth.uid() = user_id);
 
--- ブロガー検索（/bloggers）。公開ブログを1件以上持つプロフィールだけを対象に、
--- 表示名または（部分一致を含む）タグが検索語にマッチするものを返す。
--- `language sql`（security definerではない）なので、呼び出したロールの
--- RLSがそのまま適用される（profilesは誰でもSELECT可、blogsは
--- status='published'のみ誰でもSELECT可という既存ポリシーに乗る）。
-create or replace function public.search_bloggers(search_query text default null)
+-- 「さがす」（/search）にブログ検索を統合するため、ブロガー（人）を表示名・
+-- タグで探す専用の検索機能は廃止する（旧`search_bloggers`関数）。
+drop function if exists public.search_bloggers(text);
+
+-- ブログ検索（/search に統合、YouTube動画検索と並行して呼び出す）。公開済み
+-- (status='published')のブログをタイトルの部分一致で検索する。本文
+-- （blog_blocksのcontent）はTinyMCEのHTMLで、全文検索するとタグ由来の
+-- ノイズが多いため、まずはタイトルのみを検索対象にする。
+create index if not exists blogs_title_trgm_idx
+  on public.blogs using gin (title gin_trgm_ops);
+
+create or replace function public.search_blogs(
+  search_query text default null,
+  result_limit integer default 24
+)
 returns table (
+  id uuid,
   user_id uuid,
-  display_name text,
-  tags text[],
-  avatar_url text,
-  twitter_url text,
-  instagram_url text,
-  youtube_url text,
-  website_url text
+  title text,
+  thumbnail_url text,
+  created_at timestamptz,
+  updated_at timestamptz,
+  author_display_name text
 )
 language sql
 stable
 as $$
   select
-    p.user_id, p.display_name, p.tags,
-    p.avatar_url, p.twitter_url, p.instagram_url, p.youtube_url, p.website_url
-  from public.profiles p
-  where exists (
-    select 1 from public.blogs b
-    where b.user_id = p.user_id and b.status = 'published'
-  )
-  and (
-    search_query is null
-    or search_query = ''
-    or p.display_name ilike '%' || search_query || '%'
-    or exists (select 1 from unnest(p.tags) t where t ilike '%' || search_query || '%')
-  )
-  order by p.display_name nulls last;
+    b.id, b.user_id, b.title, b.thumbnail_url, b.created_at, b.updated_at,
+    p.display_name as author_display_name
+  from public.blogs b
+  left join public.profiles p on p.user_id = b.user_id
+  where b.status = 'published'
+    and (
+      search_query is null
+      or search_query = ''
+      or b.title ilike '%' || search_query || '%'
+    )
+  order by b.created_at desc
+  limit result_limit;
 $$;
 
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が

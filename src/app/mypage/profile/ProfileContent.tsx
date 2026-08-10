@@ -200,8 +200,8 @@ export default function ProfileContent() {
             >
               自分の公開ページを見る ↗
             </Link>
-            <Link href="/bloggers" className="text-brand-600 hover:underline">
-              ブロガーを探す ↗
+            <Link href="/search" className="text-brand-600 hover:underline">
+              ブログをさがす ↗
             </Link>
           </div>
         )}

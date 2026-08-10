@@ -3,12 +3,14 @@
 import { useEffect, useState } from "react";
 import SearchBar from "@/components/SearchBar";
 import VideoCard from "@/components/VideoCard";
+import BlogResultCard from "@/components/BlogResultCard";
 import SaveModal from "@/components/SaveModal";
 import Pagination from "@/components/Pagination";
 import { searchVideosWithTotal } from "@/lib/youtube";
+import { searchBlogs } from "@/lib/blogSearch";
 import { recordSearch } from "@/lib/searchHistory";
 import { GENRES } from "@/lib/constants";
-import type { VideoResult } from "@/lib/types";
+import type { BlogSearchResult, VideoResult } from "@/lib/types";
 
 const PAGE_SIZE = 50;
 
@@ -17,6 +19,9 @@ export default function SearchResults({ query }: { query: string }) {
   const [total, setTotal] = useState(0);
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
+  const [blogs, setBlogs] = useState<BlogSearchResult[]>([]);
+  const [blogStatus, setBlogStatus] = useState<"idle" | "loading" | "error">("idle");
+  const [blogErrorMessage, setBlogErrorMessage] = useState("");
   const [selectedVideo, setSelectedVideo] = useState<VideoResult | null>(null);
   const [savedMessage, setSavedMessage] = useState(false);
   const [genre, setGenre] = useState<string | null>(null);
@@ -48,7 +53,32 @@ export default function SearchResults({ query }: { query: string }) {
       });
   }, [query, genre, page]);
 
+  // ブログはYouTube動画とは独立に検索する（ジャンル・ページングは動画側だけの概念）。
+  useEffect(() => {
+    if (!query) {
+      setBlogs([]);
+      setBlogStatus("idle");
+      return;
+    }
+    setBlogStatus("loading");
+    searchBlogs(query)
+      .then((results) => {
+        setBlogs(results);
+        setBlogStatus("idle");
+      })
+      .catch((error) => {
+        setBlogErrorMessage(error instanceof Error ? error.message : "検索に失敗しました");
+        setBlogStatus("error");
+      });
+  }, [query]);
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const nothingFound =
+    Boolean(query) &&
+    status === "idle" &&
+    blogStatus === "idle" &&
+    videos.length === 0 &&
+    blogs.length === 0;
 
   function handlePageChange(nextPage: number) {
     setPage(nextPage);
@@ -84,39 +114,72 @@ export default function SearchResults({ query }: { query: string }) {
         </div>
       )}
 
-      {status === "loading" && (
-        <p className="py-12 text-center text-stone-400">検索中...</p>
-      )}
-
-      {status === "error" && (
-        <p className="py-12 text-center text-red-500">{errorMessage}</p>
-      )}
-
-      {status === "idle" && videos.length === 0 && query && (
-        <p className="py-12 text-center text-stone-400">
-          「{query}」に関連する動画が見つかりませんでした。
-        </p>
-      )}
-
       {!query && (
         <p className="py-12 text-center text-stone-400">
           エリアやジャンルを入力して検索してください。
         </p>
       )}
 
-      {status === "idle" && videos.length > 0 && (
-        // 通常ページの幅（max-w-5xl）を超えて、PCではウィンドウ幅いっぱいに
-        // 1行5件前後を並べられるよう、この一覧だけ幅の制約を外す。
-        <div className="relative left-1/2 w-screen -translate-x-1/2 px-4 lg:px-8">
-          <div className="mx-auto max-w-[1600px]">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {videos.map((video) => (
-                <VideoCard key={video.videoId} video={video} onOpen={setSelectedVideo} />
-              ))}
+      {nothingFound && (
+        <p className="py-12 text-center text-stone-400">
+          「{query}」に一致する動画・ブログが見つかりませんでした。
+        </p>
+      )}
+
+      {query && (status === "loading" || status === "error" || videos.length > 0) && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-bold text-stone-800">YouTube動画</h2>
+
+          {status === "loading" && (
+            <p className="py-6 text-center text-stone-400">検索中...</p>
+          )}
+
+          {status === "error" && (
+            <p className="py-6 text-center text-red-500">{errorMessage}</p>
+          )}
+
+          {status === "idle" && videos.length > 0 && (
+            // 通常ページの幅（max-w-5xl）を超えて、PCではウィンドウ幅いっぱいに
+            // 1行5件前後を並べられるよう、この一覧だけ幅の制約を外す。
+            <div className="relative left-1/2 w-screen -translate-x-1/2 px-4 lg:px-8">
+              <div className="mx-auto max-w-[1600px]">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  {videos.map((video) => (
+                    <VideoCard key={video.videoId} video={video} onOpen={setSelectedVideo} />
+                  ))}
+                </div>
+                <Pagination page={page} totalPages={totalPages} onChange={handlePageChange} />
+              </div>
             </div>
-            <Pagination page={page} totalPages={totalPages} onChange={handlePageChange} />
-          </div>
-        </div>
+          )}
+        </section>
+      )}
+
+      {query && (blogStatus === "loading" || blogStatus === "error" || blogs.length > 0) && (
+        <section className="flex flex-col gap-3">
+          <h2 className="text-lg font-bold text-stone-800">お出かけブログ</h2>
+
+          {blogStatus === "loading" && (
+            <p className="py-6 text-center text-stone-400">検索中...</p>
+          )}
+
+          {blogStatus === "error" && (
+            <p className="py-6 text-center text-red-500">{blogErrorMessage}</p>
+          )}
+
+          {blogStatus === "idle" && blogs.length > 0 && (
+            // 動画一覧と同じ幅の制約解除・グリッドで、見た目を揃える。
+            <div className="relative left-1/2 w-screen -translate-x-1/2 px-4 lg:px-8">
+              <div className="mx-auto max-w-[1600px]">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  {blogs.map((blog) => (
+                    <BlogResultCard key={blog.id} blog={blog} />
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
       )}
 
       {selectedVideo && (
