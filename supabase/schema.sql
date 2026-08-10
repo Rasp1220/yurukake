@@ -437,11 +437,25 @@ alter table public.profiles add column if not exists tags text[] not null defaul
 
 -- プロフィール画像（blog-mediaバケットへアップロードした公開URL）と、
 -- 任意で設定できるSNS・WebサイトのURL。すべて未設定でも表示に支障はない。
+-- twitter_url/instagram_url/youtube_urlは列名こそ「url」だが、現在はUI上で
+-- ユーザー名（例: "neko"）を入力させ、表示時にアプリ側でプロフィールURLを
+-- 組み立てる（src/lib/snsLinks.ts）。古いデータ（フルURLが入っている行）も
+-- 同ファイルの関数で読み替えるため、列自体のマイグレーションは不要。
 alter table public.profiles add column if not exists avatar_url text;
 alter table public.profiles add column if not exists twitter_url text;
 alter table public.profiles add column if not exists instagram_url text;
 alter table public.profiles add column if not exists youtube_url text;
 alter table public.profiles add column if not exists website_url text;
+
+-- プロフィール一言（自己紹介）。
+alter table public.profiles add column if not exists bio text;
+
+-- 自由に設定できるリンク欄（例: ポートフォリオ、ショップなど）。
+-- 個人ドメインを持つ人が少ないため単一のWebサイトURL欄では窮屈という声を
+-- 受け、ラベル付きのリンクを最大 MAX_PROFILE_LINKS（3件）まで登録できる
+-- ようにした（`[{ "label": "...", "url": "..." }, ...]`）。既存の
+-- website_url列はアプリ側で1件目として読み替えるため残してある。
+alter table public.profiles add column if not exists links jsonb not null default '[]'::jsonb;
 
 create index if not exists profiles_display_name_trgm_idx
   on public.profiles using gin (display_name gin_trgm_ops);

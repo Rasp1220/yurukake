@@ -39,19 +39,19 @@ export default async function NavBar() {
                     href="/mypage/profile"
                     className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
                   >
-                    プロフィール
+                    プロフィール編集
                   </Link>
                   <Link
                     href="/mypage/account"
                     className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
                   >
-                    ブロガー情報
+                    アカウント情報
                   </Link>
                   <Link
                     href="/mypage/plans"
                     className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
                   >
-                    プラン
+                    お出かけプラン
                   </Link>
                 </div>
               </div>

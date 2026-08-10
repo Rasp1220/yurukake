@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import Alert from "@/components/Alert";
 
 export default function SignupForm() {
   const router = useRouter();
@@ -81,6 +82,7 @@ export default function SignupForm() {
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
+            maxLength={255}
             className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
@@ -92,6 +94,7 @@ export default function SignupForm() {
             type="password"
             required
             minLength={6}
+            maxLength={128}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
             className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
@@ -105,13 +108,14 @@ export default function SignupForm() {
             type="password"
             required
             minLength={6}
+            maxLength={128}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
 
-        {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+        {status === "error" && <Alert>{errorMessage}</Alert>}
 
         <button
           type="submit"

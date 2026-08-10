@@ -5,6 +5,8 @@ import Link from "next/link";
 import { createPlan, deletePlan, getPlans } from "@/lib/plans";
 import MyPageTabs from "@/components/MyPageTabs";
 import SavedSpotsList from "@/components/SavedSpotsList";
+import Alert from "@/components/Alert";
+import { MAX_LENGTH } from "@/lib/constants";
 import type { Plan } from "@/lib/types";
 
 export default function PlansListContent() {
@@ -68,7 +70,7 @@ export default function PlansListContent() {
         </p>
       </div>
 
-      {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <Alert>{errorMessage}</Alert>}
 
       <form onSubmit={handleCreate} className="flex gap-2">
         <input
@@ -76,6 +78,7 @@ export default function PlansListContent() {
           value={newTitle}
           onChange={(event) => setNewTitle(event.target.value)}
           placeholder="例：週末の浅草さんぽ"
+          maxLength={MAX_LENGTH.SHORT}
           className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
         />
         <button

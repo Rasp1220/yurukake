@@ -22,3 +22,14 @@ export const GENRES = [
 
 // ブロガープロフィールに付けられるタグの候補。一旦は東京・大阪のみ。
 export const PROFILE_TAGS = ["東京", "大阪"];
+
+// ユーザーが入力するテキスト欄の最大文字数。プロフィール関連は短め、
+// それ以外（タイトルや本文）は長めに設定する。
+export const MAX_LENGTH = {
+  PROFILE: 200,
+  SHORT: 1000,
+  LONG: 2000,
+} as const;
+
+// プロフィールの自由URL欄（Webサイトなど）の最大枠数。
+export const MAX_PROFILE_LINKS = 3;

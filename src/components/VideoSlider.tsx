@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import VideoCard from "./VideoCard";
 import SaveModal from "./SaveModal";
+import Alert from "@/components/Alert";
 import { searchVideos } from "@/lib/youtube";
 import type { VideoResult } from "@/lib/types";
 
@@ -46,18 +47,16 @@ export default function VideoSlider({
       </div>
 
       {savedMessage && (
-        <div className="rounded-xl bg-green-50 px-4 py-2 text-sm text-green-700">
+        <Alert variant="success">
           行きたいリストに追加しました！プラン画面から確認できます。
-        </div>
+        </Alert>
       )}
 
       {status === "loading" && (
         <p className="py-6 text-sm text-stone-400">読み込み中...</p>
       )}
 
-      {status === "error" && (
-        <p className="py-6 text-sm text-red-500">{errorMessage}</p>
-      )}
+      {status === "error" && <Alert>{errorMessage}</Alert>}
 
       {status === "idle" && videos.length > 0 && (
         <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">

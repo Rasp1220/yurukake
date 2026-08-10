@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import MyPageTabs from "@/components/MyPageTabs";
+import Alert from "@/components/Alert";
 import { getCurrentEmail, updateAccountEmail, updateAccountPassword } from "@/lib/account";
 
 export default function AccountContent() {
@@ -85,13 +86,13 @@ export default function AccountContent() {
       <MyPageTabs />
 
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">ブロガー情報</h1>
+        <h1 className="text-2xl font-bold text-stone-800">アカウント情報</h1>
         <p className="text-sm text-stone-500">
           ログインに使うメールアドレスとパスワードを変更できます（公開プロフィールには表示されません）。
         </p>
       </div>
 
-      {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
+      {status === "error" && <Alert>{errorMessage}</Alert>}
 
       <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
         <form
@@ -105,6 +106,7 @@ export default function AccountContent() {
               required
               value={newEmail}
               onChange={(event) => setNewEmail(event.target.value)}
+              maxLength={255}
               className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
             <button
@@ -117,8 +119,12 @@ export default function AccountContent() {
               {savingEmail ? "変更中..." : "メールアドレスを変更"}
             </button>
           </div>
-          {emailMessage && <p className="text-xs text-green-600">{emailMessage}</p>}
-          {emailError && <p className="text-xs text-red-600">{emailError}</p>}
+          {emailMessage && (
+            <Alert variant="success" className="text-xs">
+              {emailMessage}
+            </Alert>
+          )}
+          {emailError && <Alert className="text-xs">{emailError}</Alert>}
         </form>
 
         <form onSubmit={handlePasswordSave} className="flex flex-col gap-2">
@@ -127,6 +133,7 @@ export default function AccountContent() {
             type="password"
             required
             minLength={6}
+            maxLength={128}
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
             placeholder="6文字以上"
@@ -136,6 +143,7 @@ export default function AccountContent() {
             type="password"
             required
             minLength={6}
+            maxLength={128}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             placeholder="新しいパスワード（確認）"
@@ -148,8 +156,12 @@ export default function AccountContent() {
           >
             {savingPassword ? "変更中..." : "パスワードを変更"}
           </button>
-          {passwordMessage && <p className="text-xs text-green-600">{passwordMessage}</p>}
-          {passwordError && <p className="text-xs text-red-600">{passwordError}</p>}
+          {passwordMessage && (
+            <Alert variant="success" className="text-xs">
+              {passwordMessage}
+            </Alert>
+          )}
+          {passwordError && <Alert className="text-xs">{passwordError}</Alert>}
         </form>
       </section>
     </div>

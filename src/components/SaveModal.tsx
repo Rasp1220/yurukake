@@ -5,7 +5,8 @@ import Link from "next/link";
 import type { VideoResult } from "@/lib/types";
 import { addSavedSpot } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
-import { GENRES } from "@/lib/constants";
+import Alert from "@/components/Alert";
+import { GENRES, MAX_LENGTH } from "@/lib/constants";
 
 export default function SaveModal({
   video,
@@ -91,6 +92,7 @@ export default function SaveModal({
               value={spotName}
               onChange={(event) => setSpotName(event.target.value)}
               placeholder="未入力の場合は動画タイトルを使用します"
+              maxLength={MAX_LENGTH.SHORT}
               className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
           </div>
@@ -103,6 +105,7 @@ export default function SaveModal({
               value={address}
               onChange={(event) => setAddress(event.target.value)}
               placeholder="例：東京都台東区浅草"
+              maxLength={MAX_LENGTH.SHORT}
               className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
           </div>
@@ -128,9 +131,7 @@ export default function SaveModal({
             </div>
           </div>
 
-          {status === "error" && (
-            <p className="text-sm text-red-600">{errorMessage}</p>
-          )}
+          {status === "error" && <Alert>{errorMessage}</Alert>}
 
           <div className="flex justify-end gap-2 pt-2">
             <button

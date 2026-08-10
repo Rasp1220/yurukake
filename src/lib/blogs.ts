@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { throwSupabaseError } from "@/lib/supabase/errors";
+import { compressContentImage } from "@/lib/imageProcessing";
 import type { Blog, BlogBlock, BlogBlockType, BlogStatus } from "./types";
 
 const MEDIA_BUCKET = "blog-media";
@@ -196,6 +197,11 @@ export async function reorderBlogBlock(
   if (e2) throwSupabaseError(e2, "並び替えに失敗しました");
 }
 
+// Vercelの無料枠は関数の実行時間・帯域に制約があり、巨大な動画ファイルは
+// アップロード・配信の両方で厳しい。サーバー側で変換はせず、あくまで
+// アップロードできるサイズに上限を設けるだけに留める。
+export const MAX_VIDEO_FILE_SIZE = 100 * 1024 * 1024;
+
 /** サムネイル・画像パーツ・動画パーツの共通アップロード処理。公開URLを返す。 */
 export async function uploadBlogMedia(file: File): Promise<string> {
   const supabase = createClient();
@@ -204,13 +210,32 @@ export async function uploadBlogMedia(file: File): Promise<string> {
   } = await supabase.auth.getUser();
   if (!user) throw new Error("ログインが必要です");
 
-  const extension = file.name.includes(".") ? file.name.split(".").pop() : undefined;
+  const isImage = file.type.startsWith("image/");
+  const isVideo = file.type.startsWith("video/");
+
+  if (isVideo && file.size > MAX_VIDEO_FILE_SIZE) {
+    throw new Error(
+      `動画ファイルが大きすぎます（${Math.floor(MAX_VIDEO_FILE_SIZE / 1024 / 1024)}MB以下にしてください）。長い動画はYouTubeにアップロードして、そのリンクをブログに貼る方法もおすすめです。`,
+    );
+  }
+
+  // 画像は縦横最大4096pxのJPEGに圧縮してからアップロードする（EXIFも
+  // 再エンコードで自動的に失われる）。動画はサーバー側で変換すると
+  // 計算リソースを大きく消費するため、そのままアップロードする。
+  const uploadFile = isImage ? await compressContentImage(file) : file;
+
+  const extension = isImage
+    ? "jpg"
+    : file.name.includes(".")
+      ? file.name.split(".").pop()
+      : undefined;
   const fileName = `${crypto.randomUUID()}${extension ? `.${extension}` : ""}`;
   const path = `${user.id}/${fileName}`;
 
-  const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, file, {
+  const { error } = await supabase.storage.from(MEDIA_BUCKET).upload(path, uploadFile, {
     cacheControl: "3600",
     upsert: false,
+    contentType: isImage ? "image/jpeg" : file.type || undefined,
   });
   if (error) throw new Error(`アップロードに失敗しました（詳細: ${error.message}）`);
 

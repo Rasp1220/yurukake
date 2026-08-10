@@ -1,5 +1,15 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Blog, BlogBlock, BlogBlockType, BlogSearchResult, BlogStatus, Profile } from "./types";
+import { MAX_PROFILE_LINKS } from "@/lib/constants";
+import { extractSnsUsername } from "@/lib/snsLinks";
+import type {
+  Blog,
+  BlogBlock,
+  BlogBlockType,
+  BlogSearchResult,
+  BlogStatus,
+  Profile,
+  ProfileLink,
+} from "./types";
 
 interface BlogRow {
   id: string;
@@ -22,12 +32,14 @@ interface BlogBlockRow {
 interface ProfileRow {
   user_id: string;
   display_name: string | null;
+  bio: string | null;
   tags: string[];
   avatar_url: string | null;
   twitter_url: string | null;
   instagram_url: string | null;
   youtube_url: string | null;
   website_url: string | null;
+  links: ProfileLink[] | null;
 }
 
 interface BlogSearchRow {
@@ -41,15 +53,23 @@ interface BlogSearchRow {
 }
 
 function profileFromRow(userId: string, row: ProfileRow | null): Profile {
+  const links =
+    row?.links && row.links.length > 0
+      ? row.links
+      : row?.website_url
+        ? [{ label: "Webサイト", url: row.website_url }]
+        : [];
+
   return {
     userId,
     displayName: row?.display_name ?? null,
+    bio: row?.bio ?? null,
     tags: row?.tags ?? [],
     avatarUrl: row?.avatar_url ?? null,
-    twitterUrl: row?.twitter_url ?? null,
-    instagramUrl: row?.instagram_url ?? null,
-    youtubeUrl: row?.youtube_url ?? null,
-    websiteUrl: row?.website_url ?? null,
+    twitterUsername: extractSnsUsername("twitter", row?.twitter_url ?? null) || null,
+    instagramUsername: extractSnsUsername("instagram", row?.instagram_url ?? null) || null,
+    youtubeUsername: extractSnsUsername("youtube", row?.youtube_url ?? null) || null,
+    links: links.slice(0, MAX_PROFILE_LINKS),
   };
 }
 
