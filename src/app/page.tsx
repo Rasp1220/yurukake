@@ -9,13 +9,13 @@ export default function HomePage() {
       <Image
         src="/images/logo-top.png"
         alt="ゆるっとおでかけ"
-        width={1774}
-        height={887}
+        width={1717}
+        height={582}
         priority
         className="mx-auto w-full max-w-md"
       />
 
-      <div className="space-y-2 text-center">
+      <div className="-mt-4 space-y-2 text-center">
         <h1 className="text-2xl font-bold text-stone-800 sm:text-3xl">
           行きたい場所、SNSからサクッと集めよう
         </h1>
