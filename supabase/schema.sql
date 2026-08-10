@@ -225,10 +225,14 @@ create policy "Anyone can write fetch progress"
   with check (true);
 
 -- サイト側の検索（トップページのエリア枠・おすすめ枠・自由検索）はすべて
--- この関数経由で area_videos を読む。都道府県名と完全一致すればその
--- 都道府県に絞り込み、一致しなければタイトル・説明文をあいまい検索する。
--- ジャンルが指定されていれば、それも同様にタイトル・説明文で絞り込む
--- （AND条件）。
+-- この関数経由で area_videos を読む。都道府県名と完全一致する行が1件でも
+-- あれば、その都道府県の行だけに絞り込む（他県のタイトル・説明文への
+-- あいまい一致は見せない）。これが無いと、例えば'石川'検索が東京の
+-- 「小石川」を含む動画までヒットしてしまい、件数・再生数で押し負けた
+-- ごく僅かな石川の動画が埋もれてしまう。完全一致する行が無いとき
+-- （都道府県名以外の自由なキーワード検索）だけ、タイトル・説明文の
+-- あいまい検索にフォールバックする。ジャンルが指定されていれば、それも
+-- 同様にタイトル・説明文で絞り込む（AND条件）。
 --
 -- sort_by='view_count'：トップページ（再生数順10件）・もっと見るページ
 -- （再生数順50件ページング）用。それ以外（既定'random'）は従来通りの
@@ -245,22 +249,29 @@ returns setof public.area_videos
 language sql
 stable
 as $$
-  select *
-  from public.area_videos
+  select av.*
+  from public.area_videos av
   where
     (
-      prefecture = search_query
-      or title ilike '%' || search_query || '%'
-      or description ilike '%' || search_query || '%'
+      case
+        when exists (
+          select 1 from public.area_videos where prefecture = search_query
+        )
+        then av.prefecture = search_query
+        else (
+          av.title ilike '%' || search_query || '%'
+          or av.description ilike '%' || search_query || '%'
+        )
+      end
     )
     and (
       search_genre is null
-      or title ilike '%' || search_genre || '%'
-      or description ilike '%' || search_genre || '%'
+      or av.title ilike '%' || search_genre || '%'
+      or av.description ilike '%' || search_genre || '%'
     )
   order by
-    case when sort_by = 'view_count' then view_count end desc nulls last,
-    case when sort_by = 'published_at' then published_at end desc nulls last,
+    case when sort_by = 'view_count' then av.view_count end desc nulls last,
+    case when sort_by = 'published_at' then av.published_at end desc nulls last,
     case when sort_by = 'random' then random() end
   limit result_limit
   offset result_offset;
@@ -277,17 +288,24 @@ language sql
 stable
 as $$
   select count(*)::integer
-  from public.area_videos
+  from public.area_videos av
   where
     (
-      prefecture = search_query
-      or title ilike '%' || search_query || '%'
-      or description ilike '%' || search_query || '%'
+      case
+        when exists (
+          select 1 from public.area_videos where prefecture = search_query
+        )
+        then av.prefecture = search_query
+        else (
+          av.title ilike '%' || search_query || '%'
+          or av.description ilike '%' || search_query || '%'
+        )
+      end
     )
     and (
       search_genre is null
-      or title ilike '%' || search_genre || '%'
-      or description ilike '%' || search_genre || '%'
+      or av.title ilike '%' || search_genre || '%'
+      or av.description ilike '%' || search_genre || '%'
     )
 $$;
 
@@ -488,6 +506,11 @@ drop function if exists public.search_bloggers(text);
 -- ノイズが多いため、まずはタイトルのみを検索対象にする。
 create index if not exists blogs_title_trgm_idx
   on public.blogs using gin (title gin_trgm_ops);
+
+-- search_genre引数を追加する前の2引数版が残っていると、PostgREST側で
+-- どちらの関数を呼ぶか一意に決まらずRPCがエラーになる（「さがす」で
+-- 「ブログの検索に失敗しました」と出る原因）。先に古い方を消しておく。
+drop function if exists public.search_blogs(text, integer);
 
 create or replace function public.search_blogs(
   search_query text default null,
