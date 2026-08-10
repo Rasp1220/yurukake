@@ -42,6 +42,12 @@ export default async function NavBar() {
                     プロフィール編集
                   </Link>
                   <Link
+                    href="/mypage/blogs"
+                    className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
+                  >
+                    ブログ
+                  </Link>
+                  <Link
                     href="/mypage/account"
                     className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
                   >
@@ -57,11 +63,6 @@ export default async function NavBar() {
               </div>
             )}
           </div>
-          {user && (
-            <Link href="/mypage/blogs" className="hover:text-brand-600">
-              ブログ
-            </Link>
-          )}
           {user ? (
             <LogoutButton />
           ) : (

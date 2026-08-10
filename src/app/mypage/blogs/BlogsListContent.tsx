@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBlog, deleteBlog, getBlogs } from "@/lib/blogs";
 import Alert from "@/components/Alert";
+import MyPageTabs from "@/components/MyPageTabs";
 import type { Blog } from "@/lib/types";
 
 const DEFAULT_BLOG_TITLE = "無題のブログ";
@@ -58,6 +59,8 @@ export default function BlogsListContent() {
 
   return (
     <div className="flex flex-col gap-6">
+      <MyPageTabs />
+
       <div>
         <h1 className="text-2xl font-bold text-stone-800">お出かけブログ</h1>
         <p className="text-sm text-stone-500">
