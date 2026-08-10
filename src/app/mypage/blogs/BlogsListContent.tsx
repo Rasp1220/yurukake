@@ -4,11 +4,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getCurrentEmail, updateAccountEmail, updateAccountPassword } from "@/lib/account";
 import { createBlog, deleteBlog, getBlogs } from "@/lib/blogs";
-import { PROFILE_TAGS } from "@/lib/constants";
-import { getMyProfile, updateMyAvatar, updateMyProfile, uploadAvatar } from "@/lib/profiles";
-import type { Blog, Profile } from "@/lib/types";
+import type { Blog } from "@/lib/types";
 
 const DEFAULT_BLOG_TITLE = "無題のブログ";
 
@@ -19,45 +16,9 @@ export default function BlogsListContent() {
   const [errorMessage, setErrorMessage] = useState("");
   const [creating, setCreating] = useState(false);
 
-  const [profile, setProfile] = useState<Profile | null>(null);
-  const [displayName, setDisplayName] = useState("");
-  const [tags, setTags] = useState<string[]>([]);
-  const [twitterUrl, setTwitterUrl] = useState("");
-  const [instagramUrl, setInstagramUrl] = useState("");
-  const [youtubeUrl, setYoutubeUrl] = useState("");
-  const [websiteUrl, setWebsiteUrl] = useState("");
-  const [savingProfile, setSavingProfile] = useState(false);
-  const [avatarUploading, setAvatarUploading] = useState(false);
-
-  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
-  const [newEmail, setNewEmail] = useState("");
-  const [savingEmail, setSavingEmail] = useState(false);
-  const [emailMessage, setEmailMessage] = useState("");
-  const [emailError, setEmailError] = useState("");
-
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [savingPassword, setSavingPassword] = useState(false);
-  const [passwordMessage, setPasswordMessage] = useState("");
-  const [passwordError, setPasswordError] = useState("");
-
   async function load() {
     try {
-      const [blogsData, profileData, email] = await Promise.all([
-        getBlogs(),
-        getMyProfile(),
-        getCurrentEmail(),
-      ]);
-      setBlogs(blogsData);
-      setProfile(profileData);
-      setDisplayName(profileData.displayName ?? "");
-      setTags(profileData.tags);
-      setTwitterUrl(profileData.twitterUrl ?? "");
-      setInstagramUrl(profileData.instagramUrl ?? "");
-      setYoutubeUrl(profileData.youtubeUrl ?? "");
-      setWebsiteUrl(profileData.websiteUrl ?? "");
-      setCurrentEmail(email);
-      setNewEmail(email ?? "");
+      setBlogs(await getBlogs());
       setStatus("idle");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "読み込みに失敗しました");
@@ -69,59 +30,6 @@ export default function BlogsListContent() {
     load();
   }, []);
 
-  function toggleTag(tag: string) {
-    setTags((current) =>
-      current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
-    );
-  }
-
-  const profileDirty =
-    displayName.trim() !== (profile?.displayName ?? "") ||
-    tags.length !== (profile?.tags.length ?? 0) ||
-    tags.some((tag) => !profile?.tags.includes(tag)) ||
-    twitterUrl.trim() !== (profile?.twitterUrl ?? "") ||
-    instagramUrl.trim() !== (profile?.instagramUrl ?? "") ||
-    youtubeUrl.trim() !== (profile?.youtubeUrl ?? "") ||
-    websiteUrl.trim() !== (profile?.websiteUrl ?? "");
-
-  async function handleProfileSave(event: React.FormEvent) {
-    event.preventDefault();
-    setSavingProfile(true);
-    try {
-      const updated = await updateMyProfile({
-        displayName: displayName.trim(),
-        tags,
-        twitterUrl: twitterUrl.trim(),
-        instagramUrl: instagramUrl.trim(),
-        youtubeUrl: youtubeUrl.trim(),
-        websiteUrl: websiteUrl.trim(),
-      });
-      setProfile(updated);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "プロフィールの更新に失敗しました");
-      setStatus("error");
-    } finally {
-      setSavingProfile(false);
-    }
-  }
-
-  async function handleAvatarChange(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    event.target.value = "";
-    if (!file) return;
-    setAvatarUploading(true);
-    try {
-      const url = await uploadAvatar(file);
-      const updated = await updateMyAvatar(url);
-      setProfile(updated);
-    } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "プロフィール画像の更新に失敗しました");
-      setStatus("error");
-    } finally {
-      setAvatarUploading(false);
-    }
-  }
-
   async function handleCreate() {
     setCreating(true);
     try {
@@ -132,48 +40,6 @@ export default function BlogsListContent() {
       setStatus("error");
     } finally {
       setCreating(false);
-    }
-  }
-
-  async function handleEmailSave(event: React.FormEvent) {
-    event.preventDefault();
-    setEmailMessage("");
-    setEmailError("");
-    setSavingEmail(true);
-    try {
-      await updateAccountEmail(newEmail.trim());
-      setEmailMessage(
-        "確認メールを新旧どちらのアドレスにも送信しました。両方のメール内のリンクをクリックすると変更が反映されます。",
-      );
-    } catch (error) {
-      setEmailError(error instanceof Error ? error.message : "メールアドレスの変更に失敗しました");
-    } finally {
-      setSavingEmail(false);
-    }
-  }
-
-  async function handlePasswordSave(event: React.FormEvent) {
-    event.preventDefault();
-    setPasswordMessage("");
-    setPasswordError("");
-    if (newPassword.length < 6) {
-      setPasswordError("パスワードは6文字以上で入力してください");
-      return;
-    }
-    if (newPassword !== confirmPassword) {
-      setPasswordError("パスワードが一致しません");
-      return;
-    }
-    setSavingPassword(true);
-    try {
-      await updateAccountPassword(newPassword);
-      setPasswordMessage("パスワードを変更しました。");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error) {
-      setPasswordError(error instanceof Error ? error.message : "パスワードの変更に失敗しました");
-    } finally {
-      setSavingPassword(false);
     }
   }
 
@@ -199,171 +65,6 @@ export default function BlogsListContent() {
       </div>
 
       {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
-
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-        <h2 className="mb-1 font-semibold text-stone-800">公開プロフィール</h2>
-        <p className="mb-3 text-xs text-stone-500">
-          ここで設定した表示名で、公開したブログの一覧ページに名前が出ます。
-        </p>
-        <div className="mb-3 flex items-center gap-3">
-          <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-full bg-stone-100">
-            {profile?.avatarUrl && (
-              <Image src={profile.avatarUrl} alt="" fill sizes="64px" className="object-cover" />
-            )}
-          </div>
-          <label className="cursor-pointer rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
-            {avatarUploading ? "アップロード中..." : profile?.avatarUrl ? "画像を変更" : "画像を選択"}
-            <input
-              type="file"
-              accept="image/*"
-              className="hidden"
-              disabled={avatarUploading}
-              onChange={handleAvatarChange}
-            />
-          </label>
-        </div>
-        <form onSubmit={handleProfileSave} className="flex flex-col gap-3">
-          <input
-            type="text"
-            value={displayName}
-            onChange={(event) => setDisplayName(event.target.value)}
-            placeholder="表示名（例：はるか）"
-            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-          />
-          <div className="flex flex-wrap gap-2">
-            {PROFILE_TAGS.map((tag) => (
-              <button
-                key={tag}
-                type="button"
-                onClick={() => toggleTag(tag)}
-                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
-                  tags.includes(tag)
-                    ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-orange-200 text-stone-600 hover:border-brand-300"
-                }`}
-              >
-                {tag}
-              </button>
-            ))}
-          </div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <input
-              type="url"
-              value={twitterUrl}
-              onChange={(event) => setTwitterUrl(event.target.value)}
-              placeholder="X（Twitter）のURL"
-              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-            />
-            <input
-              type="url"
-              value={instagramUrl}
-              onChange={(event) => setInstagramUrl(event.target.value)}
-              placeholder="InstagramのURL"
-              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-            />
-            <input
-              type="url"
-              value={youtubeUrl}
-              onChange={(event) => setYoutubeUrl(event.target.value)}
-              placeholder="YouTubeのURL"
-              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-            />
-            <input
-              type="url"
-              value={websiteUrl}
-              onChange={(event) => setWebsiteUrl(event.target.value)}
-              placeholder="WebサイトのURL"
-              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={savingProfile || !profileDirty}
-            className="self-start rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
-          >
-            {savingProfile ? "保存中..." : "保存"}
-          </button>
-        </form>
-        {profile && (
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
-            <Link
-              href={`/blogger/${profile.userId}`}
-              target="_blank"
-              className="text-brand-600 hover:underline"
-            >
-              自分の公開ページを見る ↗
-            </Link>
-            <Link href="/bloggers" className="text-brand-600 hover:underline">
-              ブロガーを探す ↗
-            </Link>
-          </div>
-        )}
-      </section>
-
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-        <h2 className="mb-1 font-semibold text-stone-800">アカウント設定</h2>
-        <p className="mb-3 text-xs text-stone-500">
-          ログインに使うメールアドレスとパスワードを変更できます（公開プロフィールには表示されません）。
-        </p>
-
-        <form
-          onSubmit={handleEmailSave}
-          className="mb-4 flex flex-col gap-2 border-b border-stone-100 pb-4"
-        >
-          <label className="text-xs font-medium text-stone-600">メールアドレス</label>
-          <div className="flex gap-2">
-            <input
-              type="email"
-              required
-              value={newEmail}
-              onChange={(event) => setNewEmail(event.target.value)}
-              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-            />
-            <button
-              type="submit"
-              disabled={
-                savingEmail || !newEmail.trim() || newEmail.trim() === (currentEmail ?? "")
-              }
-              className="flex-shrink-0 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
-            >
-              {savingEmail ? "変更中..." : "メールアドレスを変更"}
-            </button>
-          </div>
-          {emailMessage && <p className="text-xs text-green-600">{emailMessage}</p>}
-          {emailError && <p className="text-xs text-red-600">{emailError}</p>}
-        </form>
-
-        <form onSubmit={handlePasswordSave} className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-stone-600">新しいパスワード</label>
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-            placeholder="6文字以上"
-            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-          />
-          <input
-            type="password"
-            required
-            minLength={6}
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            placeholder="新しいパスワード（確認）"
-            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-          />
-          <button
-            type="submit"
-            disabled={savingPassword || !newPassword || !confirmPassword}
-            className="self-start rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
-          >
-            {savingPassword ? "変更中..." : "パスワードを変更"}
-          </button>
-          {passwordMessage && <p className="text-xs text-green-600">{passwordMessage}</p>}
-          {passwordError && <p className="text-xs text-red-600">{passwordError}</p>}
-        </form>
-      </section>
 
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-bold text-stone-800">ブログ一覧</h2>

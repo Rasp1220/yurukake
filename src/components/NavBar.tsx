@@ -21,9 +21,32 @@ export default async function NavBar() {
           <Link href="/bloggers" className="hover:text-brand-600">
             ブロガー
           </Link>
-          <Link href={user ? "/mypage" : "/login"} className="hover:text-brand-600">
-            {user ? "マイページ" : "ログイン"}
-          </Link>
+          <div className="group relative">
+            <Link
+              href={user ? "/mypage" : "/login"}
+              className="inline-block hover:text-brand-600"
+            >
+              {user ? "マイページ" : "ログイン"}
+            </Link>
+            {user && (
+              <div className="invisible absolute left-1/2 top-full z-30 -translate-x-1/2 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100">
+                <div className="w-36 rounded-xl border border-orange-100 bg-white p-1 shadow-lg">
+                  <Link
+                    href="/mypage/profile"
+                    className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
+                  >
+                    プロフィール
+                  </Link>
+                  <Link
+                    href="/mypage/account"
+                    className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
+                  >
+                    ブロガー情報
+                  </Link>
+                </div>
+              </div>
+            )}
+          </div>
           {user && (
             <Link href="/mypage/plans" className="hover:text-brand-600">
               プラン
