@@ -5,7 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createBlog, deleteBlog, getBlogs } from "@/lib/blogs";
-import { getMyProfile, updateMyDisplayName } from "@/lib/profiles";
+import { PROFILE_TAGS } from "@/lib/constants";
+import { getMyProfile, updateMyProfile } from "@/lib/profiles";
 import type { Blog, Profile } from "@/lib/types";
 
 export default function BlogsListContent() {
@@ -18,6 +19,7 @@ export default function BlogsListContent() {
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
   const [savingProfile, setSavingProfile] = useState(false);
 
   async function load() {
@@ -26,6 +28,7 @@ export default function BlogsListContent() {
       setBlogs(blogsData);
       setProfile(profileData);
       setDisplayName(profileData.displayName ?? "");
+      setTags(profileData.tags);
       setStatus("idle");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "読み込みに失敗しました");
@@ -37,14 +40,25 @@ export default function BlogsListContent() {
     load();
   }, []);
 
+  function toggleTag(tag: string) {
+    setTags((current) =>
+      current.includes(tag) ? current.filter((t) => t !== tag) : [...current, tag],
+    );
+  }
+
+  const profileDirty =
+    displayName.trim() !== (profile?.displayName ?? "") ||
+    tags.length !== (profile?.tags.length ?? 0) ||
+    tags.some((tag) => !profile?.tags.includes(tag));
+
   async function handleProfileSave(event: React.FormEvent) {
     event.preventDefault();
     setSavingProfile(true);
     try {
-      const updated = await updateMyDisplayName(displayName.trim());
+      const updated = await updateMyProfile({ displayName: displayName.trim(), tags });
       setProfile(updated);
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "表示名の更新に失敗しました");
+      setErrorMessage(error instanceof Error ? error.message : "プロフィールの更新に失敗しました");
       setStatus("error");
     } finally {
       setSavingProfile(false);
@@ -95,7 +109,7 @@ export default function BlogsListContent() {
         <p className="mb-3 text-xs text-stone-500">
           ここで設定した表示名で、公開したブログの一覧ページに名前が出ます。
         </p>
-        <form onSubmit={handleProfileSave} className="flex gap-2">
+        <form onSubmit={handleProfileSave} className="flex flex-col gap-3">
           <input
             type="text"
             value={displayName}
@@ -103,22 +117,43 @@ export default function BlogsListContent() {
             placeholder="表示名（例：はるか）"
             className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
+          <div className="flex flex-wrap gap-2">
+            {PROFILE_TAGS.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => toggleTag(tag)}
+                className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                  tags.includes(tag)
+                    ? "border-brand-600 bg-brand-600 text-white"
+                    : "border-orange-200 text-stone-600 hover:border-brand-300"
+                }`}
+              >
+                {tag}
+              </button>
+            ))}
+          </div>
           <button
             type="submit"
-            disabled={savingProfile || displayName.trim() === (profile?.displayName ?? "")}
-            className="flex-shrink-0 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            disabled={savingProfile || !profileDirty}
+            className="self-start rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
           >
             {savingProfile ? "保存中..." : "保存"}
           </button>
         </form>
         {profile && (
-          <Link
-            href={`/blogger/${profile.userId}`}
-            target="_blank"
-            className="mt-3 inline-block text-xs text-brand-600 hover:underline"
-          >
-            自分の公開ページを見る ↗
-          </Link>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs">
+            <Link
+              href={`/blogger/${profile.userId}`}
+              target="_blank"
+              className="text-brand-600 hover:underline"
+            >
+              自分の公開ページを見る ↗
+            </Link>
+            <Link href="/bloggers" className="text-brand-600 hover:underline">
+              ブロガーを探す ↗
+            </Link>
+          </div>
         )}
       </section>
 

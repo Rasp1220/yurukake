@@ -22,6 +22,13 @@ interface BlogBlockRow {
 interface ProfileRow {
   user_id: string;
   display_name: string | null;
+  tags: string[];
+}
+
+interface BloggerSearchRow {
+  user_id: string;
+  display_name: string | null;
+  tags: string[];
 }
 
 function blogFromRow(row: BlogRow): Blog {
@@ -56,7 +63,23 @@ export async function getProfile(userId: string): Promise<Profile> {
     .maybeSingle();
 
   if (error) throw new Error("プロフィールの読み込みに失敗しました");
-  return { userId, displayName: (data as ProfileRow | null)?.display_name ?? null };
+  const row = data as ProfileRow | null;
+  return { userId, displayName: row?.display_name ?? null, tags: row?.tags ?? [] };
+}
+
+/** 表示名またはタグが検索語にマッチする、公開ブログを持つブロガーを返す。 */
+export async function searchBloggers(query: string): Promise<Profile[]> {
+  const supabase = createClient();
+  const { data, error } = await supabase.rpc("search_bloggers", {
+    search_query: query.trim(),
+  });
+
+  if (error) throw new Error("ブロガーの検索に失敗しました");
+  return (data as BloggerSearchRow[]).map((row) => ({
+    userId: row.user_id,
+    displayName: row.display_name,
+    tags: row.tags ?? [],
+  }));
 }
 
 /** そのユーザーが公開設定にしたブログだけを一覧で返す（RLSで下書きは除外される）。 */

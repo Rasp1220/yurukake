@@ -18,6 +18,9 @@ export default async function NavBar() {
           <Link href="/search" className="hover:text-brand-600">
             さがす
           </Link>
+          <Link href="/bloggers" className="hover:text-brand-600">
+            ブロガー
+          </Link>
           <Link href={user ? "/mypage" : "/login"} className="hover:text-brand-600">
             {user ? "マイページ" : "ログイン"}
           </Link>

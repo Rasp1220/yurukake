@@ -5,13 +5,14 @@ import type { Profile } from "./types";
 interface ProfileRow {
   user_id: string;
   display_name: string | null;
+  tags: string[];
 }
 
 function profileFromRow(userId: string, row: ProfileRow | null): Profile {
-  return { userId, displayName: row?.display_name ?? null };
+  return { userId, displayName: row?.display_name ?? null, tags: row?.tags ?? [] };
 }
 
-/** ログイン中のユーザーの表示名（未設定ならnull）と、公開ページのURLに使うuserId。 */
+/** ログイン中のユーザーの表示名・タグ（未設定ならnull／空配列）と、公開ページのURLに使うuserId。 */
 export async function getMyProfile(): Promise<Profile> {
   const supabase = createClient();
   const {
@@ -29,7 +30,10 @@ export async function getMyProfile(): Promise<Profile> {
   return profileFromRow(user.id, data as ProfileRow | null);
 }
 
-export async function updateMyDisplayName(displayName: string): Promise<Profile> {
+export async function updateMyProfile(input: {
+  displayName: string;
+  tags: string[];
+}): Promise<Profile> {
   const supabase = createClient();
   const {
     data: { user },
@@ -38,10 +42,10 @@ export async function updateMyDisplayName(displayName: string): Promise<Profile>
 
   const { data, error } = await supabase
     .from("profiles")
-    .upsert({ user_id: user.id, display_name: displayName || null })
+    .upsert({ user_id: user.id, display_name: input.displayName || null, tags: input.tags })
     .select()
     .single();
 
-  if (error) throwSupabaseError(error, "表示名の更新に失敗しました");
+  if (error) throwSupabaseError(error, "プロフィールの更新に失敗しました");
   return profileFromRow(user.id, data as ProfileRow);
 }

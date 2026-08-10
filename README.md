@@ -18,7 +18,8 @@ YouTubeの紹介動画からお出かけスポットを検索し、行きたい�
 
 - **ジャンル・エリアフィルター**：検索結果をジャンルタグで絞り込み、ホーム画面のエリアを拡大表示
 - **お出かけプラン作成**：行きたいリストのスポットを「1日目」「2日目」のように日程へ組み込み、並び替え・移動が可能（マイページ→「お出かけプランを作る」）
-- **お出かけブログ作成**：タイトル・サムネイルに加えて、テキスト（TinyMCEのWYSIWYGエディター）・画像・動画のパーツを必要な分だけ好きな順番で追加できるブログ（マイページ→「お出かけブログを作る」）。既定は「下書き」で本人にしか見えず、「公開する」で初めて他のユーザーも閲覧可能になる。公開したブログは表示名を設定できるブロガープロフィールページ（`/blogger/[userId]`）から一覧でき、ログイン不要で閲覧できる
+- **お出かけブログ作成**：タイトル・サムネイルに加えて、テキスト（TinyMCEのWYSIWYGエディター）・画像・動画のパーツを必要な分だけ好きな順番で追加できるブログ（マイページ→「お出かけブログを作る」）。既定は「下書き」で本人にしか見えず、「公開する」で初めて他のユーザーも閲覧可能になる。公開したブログは表示名とタグ（一旦「東京」「大阪」）を設定できるブロガープロフィールページ（`/blogger/[userId]`）から一覧でき、ログイン不要で閲覧できる
+- **ブロガー検索**：表示名またはタグで、公開ブログを持つブロガーを検索できるページ（`/bloggers`、ログイン不要）。ナビの「ブロガー」、マイページの「ブロガーを探す」から遷移
 - **おすすめ（レコメンド）**：保存スポットのジャンルや検索履歴の傾向から、ホーム画面に「あなたへのおすすめ」動画を表示
 - **SNSシェア**：行きたいリストやお出かけプランをX・LINEでシェア
 - **外部アプリへの導線**：スポットごとにGoogle Map・YouTube公式アプリへのリンクを表示
@@ -41,7 +42,7 @@ cp .env.example .env.local
 ### Supabaseプロジェクトの準備
 
 1. [supabase.com](https://supabase.com) でプロジェクトを作成
-2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`blogs`／`blog_blocks`／`profiles`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）。あわせて、ブログのサムネイル・画像・動画パーツのアップロード先として `blog-media` というPublicなStorageバケットとアクセスポリシーも同じスクリプトで作成されます。`blogs`は`status`列（既定'draft'）を持ち、`status='published'`の行だけ本人以外にもRLSで閲覧を許可する
+2. `supabase/schema.sql` の内容をダッシュボードの SQL Editor で実行し、`spots`／`plans`／`plan_items`／`blogs`／`blog_blocks`／`profiles`／`area_videos`／`area_fetch_progress` テーブルとRow Level Securityポリシーを作成（このスクリプトは冪等なので、機能追加後に再実行しても安全です）。あわせて、ブログのサムネイル・画像・動画パーツのアップロード先として `blog-media` というPublicなStorageバケットとアクセスポリシーも同じスクリプトで作成されます。`blogs`は`status`列（既定'draft'）を持ち、`status='published'`の行だけ本人以外にもRLSで閲覧を許可する。`profiles`は表示名に加えて`tags`（text配列）を持ち、ブロガー検索用の`search_bloggers`関数もこのスクリプトで作成される
 3. Project Settings → API から `Project URL` と `anon public` キーを取得
 
 #### 「Could not find the table 'public.plans' in the schema cache」と出る場合
@@ -101,9 +102,10 @@ src/
     search/                # 検索結果画面（ジャンルフィルター）
     mypage/                # マイページ（保存リスト、要ログイン）
       plans/                # お出かけプラン一覧・詳細（日程スケジュール）
-      blogs/                # お出かけブログ一覧・編集（タイトル／サムネイル／パーツ／公開設定／表示名）
+      blogs/                # お出かけブログ一覧・編集（タイトル／サムネイル／パーツ／公開設定／表示名・タグ）
     blogger/[userId]/      # 公開ブロガープロフィール（そのユーザーの公開済みブログ一覧、ログイン不要）
     blogs/[id]/            # 公開ブログ詳細（ログイン不要、status='published'のみ）
+    bloggers/               # ブロガー検索（表示名・タグ、ログイン不要）
     login/                  # ログイン画面
     signup/                 # 新規登録画面
     api/search/            # area_videosから抽出して返すだけのAPI（YouTubeは呼ばない）
@@ -112,9 +114,10 @@ src/
   lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プラン／ブログCRUD・レコメンドロジック
     areaVideos.ts           # 動画プールの読み書き（サーバー専用）
     prefectures.ts          # 47都道府県リスト
+    constants.ts             # AREAS／GENRES／PROFILE_TAGSなどの固定候補リスト
     blogs.ts                # ブログ／パーツのCRUD（本人用）とメディアアップロード（Supabase Storage）
-    publicBlogs.ts          # 公開ブログ／プロフィールの読み取り専用フェッチ（サーバー専用、未ログインでも動作）
-    profiles.ts             # 表示名（プロフィール）の読み書き（本人用）
+    publicBlogs.ts          # 公開ブログ／プロフィール／ブロガー検索の読み取り専用フェッチ（サーバー専用、未ログインでも動作）
+    profiles.ts             # 表示名・タグ（プロフィール）の読み書き（本人用）
   middleware.ts             # Supabaseセッションのリフレッシュ
 scripts/
   copy-tinymce.js           # `npm install`後にTinyMCEをpublic/tinymceへセルフホスト用コピー（postinstall）

@@ -58,4 +58,5 @@ export interface BlogBlock {
 export interface Profile {
   userId: string;
   displayName: string | null;
+  tags: string[];
 }

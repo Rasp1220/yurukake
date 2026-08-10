@@ -19,3 +19,6 @@ export const GENRES = [
   "アウトドア",
   "夜景",
 ];
+
+// ブロガープロフィールに付けられるタグの候補。一旦は東京・大阪のみ。
+export const PROFILE_TAGS = ["東京", "大阪"];

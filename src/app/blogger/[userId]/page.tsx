@@ -15,6 +15,18 @@ export default async function BloggerPage({ params }: { params: { userId: string
           {profile.displayName || "ブロガー"}さんのブログ
         </h1>
         <p className="text-sm text-stone-500">公開されているお出かけブログの一覧です。</p>
+        {profile.tags.length > 0 && (
+          <div className="mt-2 flex flex-wrap gap-1">
+            {profile.tags.map((tag) => (
+              <span
+                key={tag}
+                className="rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-brand-700"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
       {blogs.length === 0 ? (

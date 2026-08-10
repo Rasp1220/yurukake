@@ -418,6 +418,15 @@ create table if not exists public.profiles (
   created_at timestamptz not null default now()
 );
 
+-- プロフィールのタグ（例：東京／大阪）。エリアなど自由に増やせるよう、
+-- 選べる候補は`src/lib/constants.ts`のPROFILE_TAGSだけで管理し、DB側は
+-- ただの文字列配列として持つ（候補を増やしてもマイグレーション不要）。
+alter table public.profiles add column if not exists tags text[] not null default '{}';
+
+create index if not exists profiles_display_name_trgm_idx
+  on public.profiles using gin (display_name gin_trgm_ops);
+create index if not exists profiles_tags_idx on public.profiles using gin (tags);
+
 alter table public.profiles enable row level security;
 
 drop policy if exists "Anyone can view profiles" on public.profiles;
@@ -434,6 +443,31 @@ drop policy if exists "Users can update their own profile" on public.profiles;
 create policy "Users can update their own profile"
   on public.profiles for update
   using (auth.uid() = user_id);
+
+-- ブロガー検索（/bloggers）。公開ブログを1件以上持つプロフィールだけを対象に、
+-- 表示名または（部分一致を含む）タグが検索語にマッチするものを返す。
+-- `language sql`（security definerではない）なので、呼び出したロールの
+-- RLSがそのまま適用される（profilesは誰でもSELECT可、blogsは
+-- status='published'のみ誰でもSELECT可という既存ポリシーに乗る）。
+create or replace function public.search_bloggers(search_query text default null)
+returns table (user_id uuid, display_name text, tags text[])
+language sql
+stable
+as $$
+  select p.user_id, p.display_name, p.tags
+  from public.profiles p
+  where exists (
+    select 1 from public.blogs b
+    where b.user_id = p.user_id and b.status = 'published'
+  )
+  and (
+    search_query is null
+    or search_query = ''
+    or p.display_name ilike '%' || search_query || '%'
+    or exists (select 1 from unnest(p.tags) t where t ilike '%' || search_query || '%')
+  )
+  order by p.display_name nulls last;
+$$;
 
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が
 -- 反映されるまで "Could not find the table 'public.xxx' in the schema cache" を
