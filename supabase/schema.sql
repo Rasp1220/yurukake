@@ -560,6 +560,21 @@ as $$
   where alias = search_query;
 $$;
 
+-- 検索語を空白（半角・全角）区切りでキーワードに分割する。「東京 浅草」の
+-- ように複数語で検索したとき、従来は連結した文字列のまま`ilike`していたため
+-- タイトルに「東京 浅草」という並びで一致する行がなければ0件になっていた
+-- （「浅草」単体なら出るのに「東京 浅草」だと出ない、の原因）。ここで語ごとに
+-- 分けて返し、呼び出し側で「すべての語を含む」AND条件に組み立て直す。
+create or replace function public.split_search_tokens(search_query text)
+returns table (token text)
+language sql
+immutable
+as $$
+  select distinct t
+  from unnest(regexp_split_to_array(trim(both from coalesce(search_query, '')), '[\s　]+')) as t
+  where t <> '';
+$$;
+
 -- サイト側の検索（トップページのエリア枠・おすすめ枠・自由検索）はすべて
 -- この関数経由で area_videos を読む。検索語が都道府県名、または `resolve_prefecture_query`
 -- が解決できる主要都市・エリア名（「札幌」「名古屋」など）なら、その都道府県の
@@ -583,6 +598,13 @@ $$;
 -- タイトル・説明文のあいまい検索になる。ジャンルが指定されていれば、それも
 -- 同様にタイトル・説明文で絞り込む（AND条件）。
 --
+-- 検索語は`split_search_tokens`で空白区切りに分割し、都道府県・エリア名に
+-- 解決できた語を絞り込みに使い、残りの語は「タイトルまたは説明文に含まれる」
+-- をAND条件で積む。例えば「東京 浅草」は prefecture='東京' AND
+-- （タイトルまたは説明文に「浅草」を含む）になる。従来は連結した「東京 浅草」
+-- という文字列のまま`ilike`していたため、その並びのままタイトルに現れる行が
+-- なければ0件になっていた。
+--
 -- sort_by='view_count'：トップページ（再生数順10件）・もっと見るページ
 -- （再生数順50件ページング）用。それ以外（既定'random'）は従来通りの
 -- ランダム表示（自由検索・おすすめ枠）。
@@ -598,18 +620,26 @@ returns setof public.area_videos
 language sql
 stable
 as $$
+  with resolved as (
+    select tok.token, public.resolve_prefecture_query(tok.token) as prefecture
+    from public.split_search_tokens(search_query) as tok
+  ),
+  matched_prefecture as (
+    select prefecture from resolved where prefecture is not null order by token limit 1
+  ),
+  keywords as (
+    select token from resolved where prefecture is null
+  )
   select av.*
   from public.area_videos av
   where
     (
-      case
-        when public.resolve_prefecture_query(search_query) is not null
-        then av.prefecture = public.resolve_prefecture_query(search_query)
-        else (
-          av.title ilike '%' || search_query || '%'
-          or av.description ilike '%' || search_query || '%'
-        )
-      end
+      (select prefecture from matched_prefecture) is null
+      or av.prefecture = (select prefecture from matched_prefecture)
+    )
+    and not exists (
+      select 1 from keywords k
+      where not (av.title ilike '%' || k.token || '%' or av.description ilike '%' || k.token || '%')
     )
     and (
       search_genre is null
@@ -634,18 +664,26 @@ returns integer
 language sql
 stable
 as $$
+  with resolved as (
+    select tok.token, public.resolve_prefecture_query(tok.token) as prefecture
+    from public.split_search_tokens(search_query) as tok
+  ),
+  matched_prefecture as (
+    select prefecture from resolved where prefecture is not null order by token limit 1
+  ),
+  keywords as (
+    select token from resolved where prefecture is null
+  )
   select count(*)::integer
   from public.area_videos av
   where
     (
-      case
-        when public.resolve_prefecture_query(search_query) is not null
-        then av.prefecture = public.resolve_prefecture_query(search_query)
-        else (
-          av.title ilike '%' || search_query || '%'
-          or av.description ilike '%' || search_query || '%'
-        )
-      end
+      (select prefecture from matched_prefecture) is null
+      or av.prefecture = (select prefecture from matched_prefecture)
+    )
+    and not exists (
+      select 1 from keywords k
+      where not (av.title ilike '%' || k.token || '%' or av.description ilike '%' || k.token || '%')
     )
     and (
       search_genre is null
@@ -849,6 +887,11 @@ drop function if exists public.search_bloggers(text);
 -- (status='published')のブログをタイトルの部分一致で検索する。本文
 -- （blog_blocksのcontent）はTinyMCEのHTMLで、全文検索するとタグ由来の
 -- ノイズが多いため、まずはタイトルのみを検索対象にする。
+--
+-- 検索語は`split_search_tokens`で空白区切りに分割し、すべての語がタイトルに
+-- 含まれることをAND条件で要求する（並び順は問わない）。従来は連結した文字列
+-- のまま`ilike`していたため、「東京 浅草」のように複数語で検索すると、その
+-- 並びのままタイトルに現れる行がなければ0件になっていた。
 create index if not exists blogs_title_trgm_idx
   on public.blogs using gin (title gin_trgm_ops);
 
@@ -880,10 +923,9 @@ as $$
   from public.blogs b
   left join public.profiles p on p.user_id = b.user_id
   where b.status = 'published'
-    and (
-      search_query is null
-      or search_query = ''
-      or b.title ilike '%' || search_query || '%'
+    and not exists (
+      select 1 from public.split_search_tokens(search_query) as tok
+      where not (b.title ilike '%' || tok.token || '%')
     )
     and (
       search_genre is null
