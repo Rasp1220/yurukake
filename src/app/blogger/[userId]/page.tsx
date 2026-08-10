@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import SnsIcon, { type SnsPlatform } from "@/components/SnsIcon";
 import { getProfile, getPublishedBlogs } from "@/lib/publicBlogs";
 
 export default async function BloggerPage({ params }: { params: { userId: string } }) {
@@ -9,11 +10,13 @@ export default async function BloggerPage({ params }: { params: { userId: string
   ]);
 
   const snsLinks = [
-    { label: "X", url: profile.twitterUrl },
-    { label: "Instagram", url: profile.instagramUrl },
-    { label: "YouTube", url: profile.youtubeUrl },
-    { label: "Web", url: profile.websiteUrl },
-  ].filter((link): link is { label: string; url: string } => Boolean(link.url));
+    { platform: "twitter" as SnsPlatform, label: "X", url: profile.twitterUrl },
+    { platform: "instagram" as SnsPlatform, label: "Instagram", url: profile.instagramUrl },
+    { platform: "youtube" as SnsPlatform, label: "YouTube", url: profile.youtubeUrl },
+    { platform: "website" as SnsPlatform, label: "Webサイト", url: profile.websiteUrl },
+  ].filter(
+    (link): link is { platform: SnsPlatform; label: string; url: string } => Boolean(link.url),
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -54,13 +57,15 @@ export default async function BloggerPage({ params }: { params: { userId: string
           <div className="flex flex-wrap justify-center gap-2">
             {snsLinks.map((link) => (
               <a
-                key={link.label}
+                key={link.platform}
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="rounded-full border border-orange-200 px-3 py-1 text-xs font-medium text-brand-600 hover:bg-orange-50"
+                aria-label={link.label}
+                title={link.label}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-orange-200 text-brand-600 hover:bg-orange-50"
               >
-                {link.label}
+                <SnsIcon platform={link.platform} className="h-4 w-4" />
               </a>
             ))}
           </div>

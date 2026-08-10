@@ -4,17 +4,19 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { getCurrentEmail, updateAccountEmail, updateAccountPassword } from "@/lib/account";
 import { createBlog, deleteBlog, getBlogs } from "@/lib/blogs";
 import { PROFILE_TAGS } from "@/lib/constants";
 import { getMyProfile, updateMyAvatar, updateMyProfile, uploadAvatar } from "@/lib/profiles";
 import type { Blog, Profile } from "@/lib/types";
+
+const DEFAULT_BLOG_TITLE = "無題のブログ";
 
 export default function BlogsListContent() {
   const router = useRouter();
   const [blogs, setBlogs] = useState<Blog[]>([]);
   const [status, setStatus] = useState<"loading" | "idle" | "error">("loading");
   const [errorMessage, setErrorMessage] = useState("");
-  const [newTitle, setNewTitle] = useState("");
   const [creating, setCreating] = useState(false);
 
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -27,9 +29,25 @@ export default function BlogsListContent() {
   const [savingProfile, setSavingProfile] = useState(false);
   const [avatarUploading, setAvatarUploading] = useState(false);
 
+  const [currentEmail, setCurrentEmail] = useState<string | null>(null);
+  const [newEmail, setNewEmail] = useState("");
+  const [savingEmail, setSavingEmail] = useState(false);
+  const [emailMessage, setEmailMessage] = useState("");
+  const [emailError, setEmailError] = useState("");
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordMessage, setPasswordMessage] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
   async function load() {
     try {
-      const [blogsData, profileData] = await Promise.all([getBlogs(), getMyProfile()]);
+      const [blogsData, profileData, email] = await Promise.all([
+        getBlogs(),
+        getMyProfile(),
+        getCurrentEmail(),
+      ]);
       setBlogs(blogsData);
       setProfile(profileData);
       setDisplayName(profileData.displayName ?? "");
@@ -38,6 +56,8 @@ export default function BlogsListContent() {
       setInstagramUrl(profileData.instagramUrl ?? "");
       setYoutubeUrl(profileData.youtubeUrl ?? "");
       setWebsiteUrl(profileData.websiteUrl ?? "");
+      setCurrentEmail(email);
+      setNewEmail(email ?? "");
       setStatus("idle");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "読み込みに失敗しました");
@@ -102,19 +122,58 @@ export default function BlogsListContent() {
     }
   }
 
-  async function handleCreate(event: React.FormEvent) {
-    event.preventDefault();
-    const title = newTitle.trim();
-    if (!title) return;
+  async function handleCreate() {
     setCreating(true);
     try {
-      const blog = await createBlog(title);
+      const blog = await createBlog(DEFAULT_BLOG_TITLE);
       router.push(`/mypage/blogs/${blog.id}`);
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "作成に失敗しました");
       setStatus("error");
     } finally {
       setCreating(false);
+    }
+  }
+
+  async function handleEmailSave(event: React.FormEvent) {
+    event.preventDefault();
+    setEmailMessage("");
+    setEmailError("");
+    setSavingEmail(true);
+    try {
+      await updateAccountEmail(newEmail.trim());
+      setEmailMessage(
+        "確認メールを新旧どちらのアドレスにも送信しました。両方のメール内のリンクをクリックすると変更が反映されます。",
+      );
+    } catch (error) {
+      setEmailError(error instanceof Error ? error.message : "メールアドレスの変更に失敗しました");
+    } finally {
+      setSavingEmail(false);
+    }
+  }
+
+  async function handlePasswordSave(event: React.FormEvent) {
+    event.preventDefault();
+    setPasswordMessage("");
+    setPasswordError("");
+    if (newPassword.length < 6) {
+      setPasswordError("パスワードは6文字以上で入力してください");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPasswordError("パスワードが一致しません");
+      return;
+    }
+    setSavingPassword(true);
+    try {
+      await updateAccountPassword(newPassword);
+      setPasswordMessage("パスワードを変更しました。");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error) {
+      setPasswordError(error instanceof Error ? error.message : "パスワードの変更に失敗しました");
+    } finally {
+      setSavingPassword(false);
     }
   }
 
@@ -241,26 +300,86 @@ export default function BlogsListContent() {
         )}
       </section>
 
-      <form onSubmit={handleCreate} className="flex gap-2">
-        <input
-          type="text"
-          value={newTitle}
-          onChange={(event) => setNewTitle(event.target.value)}
-          placeholder="例：鎌倉さんぽ日記"
-          className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-        />
+      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+        <h2 className="mb-1 font-semibold text-stone-800">アカウント設定</h2>
+        <p className="mb-3 text-xs text-stone-500">
+          ログインに使うメールアドレスとパスワードを変更できます（公開プロフィールには表示されません）。
+        </p>
+
+        <form
+          onSubmit={handleEmailSave}
+          className="mb-4 flex flex-col gap-2 border-b border-stone-100 pb-4"
+        >
+          <label className="text-xs font-medium text-stone-600">メールアドレス</label>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              required
+              value={newEmail}
+              onChange={(event) => setNewEmail(event.target.value)}
+              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            />
+            <button
+              type="submit"
+              disabled={
+                savingEmail || !newEmail.trim() || newEmail.trim() === (currentEmail ?? "")
+              }
+              className="flex-shrink-0 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+            >
+              {savingEmail ? "変更中..." : "メールアドレスを変更"}
+            </button>
+          </div>
+          {emailMessage && <p className="text-xs text-green-600">{emailMessage}</p>}
+          {emailError && <p className="text-xs text-red-600">{emailError}</p>}
+        </form>
+
+        <form onSubmit={handlePasswordSave} className="flex flex-col gap-2">
+          <label className="text-xs font-medium text-stone-600">新しいパスワード</label>
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={newPassword}
+            onChange={(event) => setNewPassword(event.target.value)}
+            placeholder="6文字以上"
+            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          />
+          <input
+            type="password"
+            required
+            minLength={6}
+            value={confirmPassword}
+            onChange={(event) => setConfirmPassword(event.target.value)}
+            placeholder="新しいパスワード（確認）"
+            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          />
+          <button
+            type="submit"
+            disabled={savingPassword || !newPassword || !confirmPassword}
+            className="self-start rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+          >
+            {savingPassword ? "変更中..." : "パスワードを変更"}
+          </button>
+          {passwordMessage && <p className="text-xs text-green-600">{passwordMessage}</p>}
+          {passwordError && <p className="text-xs text-red-600">{passwordError}</p>}
+        </form>
+      </section>
+
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-bold text-stone-800">ブログ一覧</h2>
         <button
-          type="submit"
+          type="button"
+          onClick={handleCreate}
           disabled={creating}
           className="flex-shrink-0 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
         >
-          {creating ? "作成中..." : "新規作成"}
+          {creating ? "作成中..." : "+ 新しいブログを作成"}
         </button>
-      </form>
+      </div>
 
       {blogs.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-orange-200 bg-orange-50 py-12 text-center text-stone-500">
-          まだブログがありません。上のフォームから作成してみましょう。
+          まだブログがありません。上のボタンから作成してみましょう。
         </p>
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">

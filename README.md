@@ -20,6 +20,7 @@ YouTubeの紹介動画からお出かけスポットを検索し、行きたい�
 - **お出かけプラン作成**：行きたいリストのスポットを「1日目」「2日目」のように日程へ組み込み、並び替え・移動が可能（マイページ→「お出かけプランを作る」）
 - **お出かけブログ作成**：タイトル・サムネイルに加えて、テキスト（TinyMCEのWYSIWYGエディター）・画像・動画のパーツを必要な分だけ好きな順番で追加できるブログ（マイページ→「お出かけブログを作る」）。既定は「下書き」で本人にしか見えず、「公開する」で初めて他のユーザーも閲覧可能になる。公開したブログは表示名・プロフィール画像・SNS（X／Instagram／YouTube／Webサイト）リンク・タグ（一旦「東京」「大阪」）を設定できるブロガープロフィールページ（`/blogger/[userId]`）から一覧でき、ログイン不要で閲覧できる
 - **ブロガー検索**：表示名またはタグで、公開ブログを持つブロガーを検索できるページ（`/bloggers`、ログイン不要）。ナビの「ブロガー」、マイページの「ブロガーを探す」から遷移
+- **アカウント設定**：マイページのブログ一覧画面（プロフィール編集の近く）から、ログイン用のメールアドレス・パスワードを変更可能（Supabase Authの`updateUser`を使用。メールアドレス変更は既定で新旧両方のアドレスへの確認メールが必要）
 - **おすすめ（レコメンド）**：保存スポットのジャンルや検索履歴の傾向から、ホーム画面に「あなたへのおすすめ」動画を表示
 - **SNSシェア**：行きたいリストやお出かけプランをX・LINEでシェア
 - **外部アプリへの導線**：スポットごとにGoogle Map・YouTube公式アプリへのリンクを表示
@@ -110,14 +111,15 @@ src/
     signup/                 # 新規登録画面
     api/search/            # area_videosから抽出して返すだけのAPI（YouTubeは呼ばない）
     api/cron/fetch-area-videos/  # YouTube APIを呼んでarea_videosを埋めるバッチ
-  components/              # UIコンポーネント（ShareButtons, RecommendedSection, RichTextEditor（TinyMCE）ほか）
+  components/              # UIコンポーネント（ShareButtons, RecommendedSection, RichTextEditor（TinyMCE）, SnsIconほか）
   lib/                      # 型定義・Supabaseヘルパー・APIクライアント・プラン／ブログCRUD・レコメンドロジック
     areaVideos.ts           # 動画プールの読み書き（サーバー専用）
     prefectures.ts          # 47都道府県リスト
     constants.ts             # AREAS／GENRES／PROFILE_TAGSなどの固定候補リスト
     blogs.ts                # ブログ／パーツのCRUD（本人用）とメディアアップロード（Supabase Storage）
     publicBlogs.ts          # 公開ブログ／プロフィール／ブロガー検索の読み取り専用フェッチ（サーバー専用、未ログインでも動作）
-    profiles.ts             # 表示名・タグ（プロフィール）の読み書き（本人用）
+    profiles.ts             # 表示名・タグ・アバター・SNSリンク（プロフィール）の読み書き（本人用）
+    account.ts               # ログイン用メールアドレス・パスワードの変更（Supabase Auth）
   middleware.ts             # Supabaseセッションのリフレッシュ
 scripts/
   copy-tinymce.js           # `npm install`後にTinyMCEをpublic/tinymceへセルフホスト用コピー（postinstall）
