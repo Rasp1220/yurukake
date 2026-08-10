@@ -65,8 +65,8 @@ export default function SearchResults({ query }: { query: string }) {
       });
   }, [query, genre, page]);
 
-  // ブログには動画のようなページングが無いため、クエリが変わったときだけ
-  // 新着順で取り直す（動画のジャンル・ページ送りには連動させない）。
+  // ブログには動画のようなページングが無いため、クエリ・ジャンルが変わった
+  // ときだけ新着順で取り直す（動画のページ送りには連動させない）。
   useEffect(() => {
     if (!query) {
       setBlogs([]);
@@ -74,7 +74,7 @@ export default function SearchResults({ query }: { query: string }) {
       return;
     }
     setBlogStatus("loading");
-    searchBlogs(query)
+    searchBlogs(query, genre)
       .then((results) => {
         setBlogs(results);
         setBlogStatus("idle");
@@ -83,7 +83,7 @@ export default function SearchResults({ query }: { query: string }) {
         setBlogErrorMessage(error instanceof Error ? error.message : "検索に失敗しました");
         setBlogStatus("error");
       });
-  }, [query]);
+  }, [query, genre]);
 
   // YouTube動画とブログを、種類を問わず公開日時の降順で1つの一覧にまとめる。
   // ブログはページングを持たないため、動画の2ページ目以降との重複を避けるべく

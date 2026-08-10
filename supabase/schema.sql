@@ -491,7 +491,8 @@ create index if not exists blogs_title_trgm_idx
 
 create or replace function public.search_blogs(
   search_query text default null,
-  result_limit integer default 24
+  result_limit integer default 24,
+  search_genre text default null
 )
 returns table (
   id uuid,
@@ -515,6 +516,10 @@ as $$
       search_query is null
       or search_query = ''
       or b.title ilike '%' || search_query || '%'
+    )
+    and (
+      search_genre is null
+      or b.title ilike '%' || search_genre || '%'
     )
   order by b.created_at desc
   limit result_limit;

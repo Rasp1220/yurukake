@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GENRES } from "@/lib/constants";
+import { GENRES, SPOT_RELEVANCE_KEYWORDS } from "@/lib/constants";
 import { PREFECTURES, type Prefecture } from "@/lib/prefectures";
 import {
   getFetchProgressOrderedByStaleness,
@@ -98,9 +98,22 @@ async function fetchPage(
     // サムネイルが無い動画は一覧に出しても絵が出ないうえ、`thumbnail_url` は
     // NOT NULL なので、1件でも混ざるとその都道府県の upsert がまるごと失敗する。
     // 表示できないものは最初から取り込まない。
-    .filter((item: VideoResult) => item.videoId && item.thumbnailUrl);
+    // あわせて、お出かけ・旅行スポットらしいキーワードを含まない動画も除外する。
+    .filter(
+      (item: VideoResult) => item.videoId && item.thumbnailUrl && looksLikeSpotVideo(item),
+    );
 
   return { items, nextPageToken: data.nextPageToken };
+}
+
+// YouTube検索は都道府県名やジャンル語が緩くマッチするだけで採用してしまうため、
+// タイトル・説明文が「お出かけ・旅行スポット紹介」らしい内容かをキーワードで
+// 判定し、無関係な動画（いたずら動画・日常vlog等）を取り込み対象から除く。
+const lowerCaseKeywords = SPOT_RELEVANCE_KEYWORDS.map((keyword) => keyword.toLowerCase());
+
+function looksLikeSpotVideo(item: VideoResult): boolean {
+  const haystack = `${item.title} ${item.description}`.toLowerCase();
+  return lowerCaseKeywords.some((keyword) => haystack.includes(keyword));
 }
 
 /** videos.list（統計情報）で再生数をまとめて取得する。最大50件/回。 */
