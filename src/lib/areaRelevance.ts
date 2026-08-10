@@ -90,9 +90,13 @@ export function belongsToPrefecture(
 // 何も失われないので、これで弾いて構わない。
 const lowerCaseSpotKeywords = SPOT_RELEVANCE_KEYWORDS.map((keyword) => keyword.toLowerCase());
 
-export function looksLikeSpotVideo(title: string, description: string): boolean {
-  const haystack = `${title} ${description}`.toLowerCase();
+function hasSpotKeyword(text: string): boolean {
+  const haystack = text.toLowerCase();
   return lowerCaseSpotKeywords.some((keyword) => haystack.includes(keyword));
+}
+
+export function looksLikeSpotVideo(title: string, description: string): boolean {
+  return hasSpotKeyword(title) || hasSpotKeyword(description);
 }
 
 // 保存済みの行を点検する `/api/cron/cleanup-irrelevant-videos` 用。
@@ -113,13 +117,25 @@ const lowerCaseIrrelevantKeywords = IRRELEVANT_VIDEO_KEYWORDS.map((keyword) =>
   keyword.toLowerCase(),
 );
 
-export function looksIrrelevantVideo(title: string, description: string): boolean {
-  const haystack = `${title} ${description}`.toLowerCase();
-  const hasIrrelevantSignal = lowerCaseIrrelevantKeywords.some((keyword) =>
-    haystack.includes(keyword),
-  );
-  if (!hasIrrelevantSignal) return false;
+function hasIrrelevantKeyword(text: string): boolean {
+  const haystack = text.toLowerCase();
+  return lowerCaseIrrelevantKeywords.some((keyword) => haystack.includes(keyword));
+}
 
+export function looksIrrelevantVideo(title: string, description: string): boolean {
+  // 無関係キーワードはタイトルだけで判定する。説明文はチャンネル共通の
+  // 定型文（「旅行やグルメを紹介しています」等）が入っていることが多く、
+  // 動画本体（例：「アメが出てくるキャンディ銃で襲ってみた…#ドッキリ」）
+  // とは無関係な内容であることが珍しくないため、説明文にまで無関係
+  // キーワードを探すと誤検知（例えば定型文中の「ドッキリ企画は行いません」
+  // のような否定文）を拾いかねない。無関係だと言い切るにはタイトル自体に
+  // その言い回しがあることを要求する。
+  if (!hasIrrelevantKeyword(title)) return false;
+
+  // 一方、「本当はスポット紹介である」ことを示す救済判定はタイトル・説明文の
+  // どちらにあってもよい（`looksLikeSpotVideo` は据え置き）。タイトルに
+  // 無関係キーワードがあっても、同じタイトルか説明文にスポットらしい語が
+  // あれば紹介動画側の企画と判断し、消さない。
   return !looksLikeSpotVideo(title, description);
 }
 
@@ -136,7 +152,9 @@ export function isShortsDuration(durationSeconds: number | null | undefined): bo
 /**
  * 点検が「なぜこの行を消すのか」。レスポンスにそのまま出して、消える理由の
  * 内訳を目で確かめられるようにする。
- * - `category`：YouTubeの動画カテゴリが音楽・ゲーム等（最も確実な根拠）
+ * - `category`：YouTubeの動画カテゴリが無関係（`IRRELEVANT_VIDEO_CATEGORY_IDS`）、
+ *   かつスポットらしい語には一致しない（カテゴリも投稿者の選択ミスがあり得るため
+ *   無条件には信頼しない）
  * - `channel`：人がチャンネルごと無関係だと判断した（`area_video_channel_blocklist`）
  * - `shorts`：60秒以下の短尺動画（`?deleteShorts=true` のときだけ）
  * - `keyword`：無関係キーワードに一致し、スポットらしい語には一致しない
@@ -167,12 +185,21 @@ export interface IrrelevanceOptions {
  * →「人がチャンネル単位で下した判断」→「キーワード」の順にしてある。
  * どの根拠にも当たらない行は消さずに残す（`cleanup-area-videos` が
  * 「よその県だと確認できた行」だけを消すのと同じ考え方）。
+ *
+ * カテゴリ判定にも「本当はスポット紹介である」救済チェックを掛ける。
+ * 「安全なはず」の28（科学と技術）でさえ、投稿者がカテゴリを誤って
+ * 選んだキャンプ場紹介動画（タイトルに「グランピング」）が実データで
+ * 見つかった。カテゴリは文字列より信頼できるとはいえ、投稿者が選ぶ
+ * 以上は誤りが混ざりうるため、タイトル・説明文にスポットらしい語が
+ * 明確にあるときは、カテゴリ判定より優先して救済する。
  */
 export function judgeIrrelevance(
   video: IrrelevanceInput,
   options: IrrelevanceOptions,
 ): IrrelevanceReason | null {
-  if (isIrrelevantCategory(video.categoryId)) return "category";
+  if (isIrrelevantCategory(video.categoryId) && !looksLikeSpotVideo(video.title, video.description)) {
+    return "category";
+  }
   if (options.blockedChannels.has(video.channelTitle)) return "channel";
   if (options.deleteShorts && isShortsDuration(video.durationSeconds)) return "shorts";
   if (looksIrrelevantVideo(video.title, video.description)) return "keyword";
