@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getProfile, getPublishedBlog, getPublishedBlogBlocks } from "@/lib/publicBlogs";
@@ -24,18 +23,6 @@ export default async function PublicBlogPage({ params }: { params: { id: string 
         </Link>
         <h1 className="text-2xl font-bold text-stone-800">{blog.title}</h1>
       </div>
-
-      {blog.thumbnailUrl && (
-        <div className="relative h-64 w-full overflow-hidden rounded-2xl bg-stone-100">
-          <Image
-            src={blog.thumbnailUrl}
-            alt={blog.title}
-            fill
-            sizes="720px"
-            className="object-cover"
-          />
-        </div>
-      )}
 
       <div className="flex flex-col gap-6">
         {blocks.map((block) => (
