@@ -18,6 +18,12 @@ type SearchResultItem =
   | { kind: "video"; date: string; video: VideoResult }
   | { kind: "blog"; date: string; blog: BlogSearchResult };
 
+const TYPE_FILTERS: { label: string; value: "all" | "video" | "blog" }[] = [
+  { label: "すべて", value: "all" },
+  { label: "YouTube", value: "video" },
+  { label: "ブログ", value: "blog" },
+];
+
 export default function SearchResults({ query }: { query: string }) {
   const [videos, setVideos] = useState<VideoResult[]>([]);
   const [total, setTotal] = useState(0);
@@ -29,6 +35,7 @@ export default function SearchResults({ query }: { query: string }) {
   const [selectedVideo, setSelectedVideo] = useState<VideoResult | null>(null);
   const [savedMessage, setSavedMessage] = useState(false);
   const [genre, setGenre] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"all" | "video" | "blog">("all");
   const [page, setPage] = useState(1);
 
   // 検索条件が変わったら1ページ目に戻す。
@@ -93,10 +100,19 @@ export default function SearchResults({ query }: { query: string }) {
     return [...videoItems, ...blogItems].sort((a, b) => (b.date || "").localeCompare(a.date || ""));
   }, [videos, blogs, page]);
 
+  const filteredItems = useMemo(
+    () => (typeFilter === "all" ? items : items.filter((item) => item.kind === typeFilter)),
+    [items, typeFilter],
+  );
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const loading = status === "loading" || (page === 1 && blogStatus === "loading");
   const nothingFound =
-    Boolean(query) && !loading && items.length === 0 && status !== "error" && blogStatus !== "error";
+    Boolean(query) &&
+    !loading &&
+    filteredItems.length === 0 &&
+    status !== "error" &&
+    blogStatus !== "error";
 
   function handlePageChange(nextPage: number) {
     setPage(nextPage);
@@ -106,6 +122,25 @@ export default function SearchResults({ query }: { query: string }) {
   return (
     <div className="flex flex-col gap-6">
       <SearchBar initialQuery={query} />
+
+      {query && (
+        <div className="flex flex-wrap gap-2">
+          {TYPE_FILTERS.map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setTypeFilter(option.value)}
+              className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
+                typeFilter === option.value
+                  ? "border-stone-700 bg-stone-700 text-white"
+                  : "border-stone-300 text-stone-600 hover:border-stone-500"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {query && (
         <div className="flex flex-wrap gap-2">
@@ -156,13 +191,13 @@ export default function SearchResults({ query }: { query: string }) {
         </p>
       )}
 
-      {!loading && items.length > 0 && (
+      {!loading && filteredItems.length > 0 && (
         // 通常ページの幅（max-w-5xl）を超えて、PCではウィンドウ幅いっぱいに
         // 1行5件前後を並べられるよう、この一覧だけ幅の制約を外す。
         <div className="relative left-1/2 w-screen -translate-x-1/2 px-4 lg:px-8">
           <div className="mx-auto max-w-[1600px]">
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-              {items.map((item) =>
+              {filteredItems.map((item) =>
                 item.kind === "video" ? (
                   <VideoCard
                     key={`video-${item.video.videoId}`}
