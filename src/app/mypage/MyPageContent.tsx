@@ -71,6 +71,17 @@ export default function MyPageContent() {
         </div>
       </div>
 
+      {/* ナビの「マイページ」ホバーメニューと同じ導線。ホバーできないタッチ端末
+          からもプロフィール・ブロガー情報へ辿り着けるようにここにも置く。 */}
+      <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+        <Link href="/mypage/profile" className="font-medium text-brand-600 hover:underline">
+          プロフィール
+        </Link>
+        <Link href="/mypage/account" className="font-medium text-brand-600 hover:underline">
+          ブロガー情報
+        </Link>
+      </div>
+
       {status === "error" && <p className="text-sm text-red-600">{errorMessage}</p>}
 
       {spots.length === 0 ? (

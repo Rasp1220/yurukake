@@ -133,14 +133,24 @@ export async function addBlogBlock(
   content = "",
 ): Promise<BlogBlock> {
   const supabase = createClient();
-  const { count } = await supabase
+  // 件数ではなく「現在の最大sort_order + 1」を使う。件数だと、途中のパーツを
+  // 削除したあとに追加したときへ既存パーツと同じsort_orderが割り当てられ
+  // （例: [0,2]が残っている状態で件数2を採番）、並び順が不定になるうえ
+  // ↑↓の入れ替え（同じ値同士の交換）が効かなくなる。
+  const { data: lastBlock } = await supabase
     .from("blog_blocks")
-    .select("id", { count: "exact", head: true })
-    .eq("blog_id", blogId);
+    .select("sort_order")
+    .eq("blog_id", blogId)
+    .order("sort_order", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const nextSortOrder =
+    lastBlock === null ? 0 : ((lastBlock as { sort_order: number }).sort_order ?? 0) + 1;
 
   const { data, error } = await supabase
     .from("blog_blocks")
-    .insert({ blog_id: blogId, type, content, sort_order: count ?? 0 })
+    .insert({ blog_id: blogId, type, content, sort_order: nextSortOrder })
     .select()
     .single();
 

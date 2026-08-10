@@ -29,7 +29,9 @@ export default async function NavBar() {
               {user ? "マイページ" : "ログイン"}
             </Link>
             {user && (
-              <div className="invisible absolute left-1/2 top-full z-30 -translate-x-1/2 pt-2 opacity-0 transition group-hover:visible group-hover:opacity-100">
+              // ホバーに加えてフォーカス（キーボード操作）でも開くようにする。
+              // タッチ端末ではホバーが無いため、/mypage 側にも同じ導線を置いている。
+              <div className="invisible absolute left-1/2 top-full z-30 -translate-x-1/2 pt-2 opacity-0 transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
                 <div className="w-36 rounded-xl border border-orange-100 bg-white p-1 shadow-lg">
                   <Link
                     href="/mypage/profile"
