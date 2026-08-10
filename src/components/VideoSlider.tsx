@@ -67,7 +67,10 @@ export default function VideoSlider({
       {status === "idle" && videos.length > 0 && (
         <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">
           {videos.map((video) => (
-            <div key={video.videoId} className="w-52 flex-shrink-0 snap-start sm:w-60">
+            <div
+              key={video.videoId}
+              className="w-52 flex-shrink-0 snap-start sm:w-60 lg:w-[calc((100%-3rem)/4)] xl:w-[calc((100%-4rem)/5)]"
+            >
               <VideoCard video={video} onOpen={setSelectedVideo} />
             </div>
           ))}
