@@ -34,15 +34,15 @@ export default async function PublicBlogPage({ params }: { params: { id: string 
               />
             )}
             {block.type === "image" && block.content && (
-              // 本文中の画像は元の縦横比のまま表示する（切り抜かない）。縦長・
-              // 横長どちらの写真も違和感なく収まるよう、高さの上限・下限だけ
-              // 設けている。
+              // width/heightを固定せずmax-width・max-heightのみ指定することで、
+              // 縦横比を保ったまま大きすぎる画像だけ縮小され、余白（レターボックス）
+              // が出ない。
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={block.content}
                 alt=""
                 loading="lazy"
-                className="mx-auto min-h-[160px] max-h-[720px] w-full rounded-2xl bg-stone-100 object-contain"
+                className="mx-auto block max-h-[720px] max-w-full rounded-2xl"
               />
             )}
             {block.type === "video" && block.content && (

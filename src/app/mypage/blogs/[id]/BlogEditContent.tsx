@@ -434,16 +434,15 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
               {block.type === "image" && (
                 <div className="flex flex-col gap-2">
                   {block.content ? (
-                    // 本文中の画像は一覧のサムネイルと違って統一比率にする
-                    // 必要が無いため、切り抜かずに元の縦横比のまま表示する
-                    // （縦長・横長どちらの写真も違和感なく収まるよう、高さの
-                    // 上限・下限だけを設けている）。
+                    // width/heightを固定せずmax-width・max-heightのみ指定することで、
+                    // 縦横比を保ったまま大きすぎる画像だけ縮小され、余白（レターボックス）
+                    // が出ない。
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={block.content}
                       alt=""
                       loading="lazy"
-                      className="mx-auto min-h-[120px] max-h-[520px] w-full rounded-xl bg-stone-100 object-contain"
+                      className="mx-auto block max-h-[520px] max-w-full rounded-xl"
                     />
                   ) : (
                     <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
