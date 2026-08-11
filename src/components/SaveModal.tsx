@@ -38,7 +38,7 @@ export default function SaveModal({
         videoId: video.videoId,
         videoTitle: video.title,
         thumbnailUrl: video.thumbnailUrl,
-        spotName: spotName.trim() || video.title,
+        spotName: spotName.trim(),
         genre,
       });
       onSaved();
