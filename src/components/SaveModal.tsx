@@ -2,9 +2,11 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { Icon } from "@iconify/react";
 import type { VideoResult } from "@/lib/types";
 import { addSavedSpot } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
+import { guessLocation } from "@/lib/areaRelevance";
 import Alert from "@/components/Alert";
 import { GENRES, MAX_LENGTH } from "@/lib/constants";
 
@@ -18,7 +20,11 @@ export default function SaveModal({
   onSaved: () => void;
 }) {
   const [spotName, setSpotName] = useState("");
-  const [address, setAddress] = useState("");
+  // 動画のタイトル・説明文から地名を推測できれば、住所欄の初期値として
+  // 入れておく（あくまで推測なので、欄は引き続き自由に編集・削除できる）。
+  const [address, setAddress] = useState(
+    () => guessLocation(video.title, video.description) ?? "",
+  );
   const [genre, setGenre] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -56,9 +62,17 @@ export default function SaveModal({
       onClick={onClose}
     >
       <div
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
+        className="relative max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-5 shadow-xl"
         onClick={(event) => event.stopPropagation()}
       >
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="閉じる"
+          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow-sm hover:bg-stone-100 hover:text-stone-700"
+        >
+          <Icon icon="mdi:close" className="h-5 w-5" />
+        </button>
         <div className="mb-4 aspect-video w-full overflow-hidden rounded-xl bg-black">
           <iframe
             className="h-full w-full"
