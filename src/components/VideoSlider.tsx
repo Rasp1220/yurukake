@@ -65,7 +65,7 @@ export default function VideoSlider({
       {status === "error" && <Alert>{errorMessage}</Alert>}
 
       {status === "idle" && videos.length > 0 && (
-        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">
+        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2">
           {videos.map((video) => (
             <div
               key={video.videoId}

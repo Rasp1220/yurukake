@@ -47,7 +47,7 @@ export default function RecommendedSection() {
       {status === "loading" && <p className="py-6 text-sm text-stone-400">読み込み中...</p>}
 
       {status === "idle" && (
-        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">
+        <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2">
           {videos.map((video) => (
             <div
               key={video.videoId}

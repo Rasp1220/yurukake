@@ -109,7 +109,7 @@ export default async function BloggerPage({ params }: { params: { userId: string
       ) : (
         <div className="flex flex-col items-center gap-4">
           <h2 className="self-start text-lg font-bold text-stone-800">新着ブログ</h2>
-          <div className="-mx-4 flex w-full snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2">
+          <div className="-mx-4 flex w-full snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2">
             {blogs.map((blog) => (
               <div key={blog.id} className="w-64 flex-shrink-0 snap-start">
                 <BlogCard blog={blog} />
