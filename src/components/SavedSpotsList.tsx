@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Icon } from "@iconify/react";
 import { getSavedSpots, removeSavedSpot } from "@/lib/storage";
-import { googleMapsUrl, youtubeWatchUrl } from "@/lib/links";
+import { youtubeWatchUrl } from "@/lib/links";
+import { spotDisplayName, spotMapsUrl } from "@/lib/spots";
 import Alert from "@/components/Alert";
 import ShareButtons from "@/components/ShareButtons";
 import type { SavedSpot } from "@/lib/types";
@@ -48,7 +49,7 @@ export default function SavedSpotsList() {
 
   const shareText =
     spots.length > 0
-      ? `行きたいリスト：${spots.map((spot) => spot.spotName).join("、")}`
+      ? `行きたいリスト：${spots.map((spot) => spotDisplayName(spot)).join("、")}`
       : "";
 
   return (
@@ -88,16 +89,18 @@ export default function SavedSpotsList() {
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="text-sm font-semibold text-brand-600">
-                        #{index + 1} {spot.spotName}
+                        #{index + 1} {spotDisplayName(spot)}
                         {spot.genre && (
                           <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
                             {spot.genre}
                           </span>
                         )}
                       </p>
-                      <p className="line-clamp-1 text-xs text-stone-500">
-                        {spot.address || "住所未設定"}
-                      </p>
+                      {/* 住所の入力欄は廃止したため、以前に住所を入れて保存した
+                          スポットだけこの行が出る（新規保存では常に空になる）。 */}
+                      {spot.address && (
+                        <p className="line-clamp-1 text-xs text-stone-500">{spot.address}</p>
+                      )}
                     </div>
                     <button
                       onClick={() => handleRemove(spot.id)}
@@ -110,7 +113,7 @@ export default function SavedSpotsList() {
                   </div>
                   <div className="flex items-center gap-2">
                     <a
-                      href={googleMapsUrl(spot.address || spot.spotName)}
+                      href={spotMapsUrl(spot)}
                       target="_blank"
                       rel="noopener noreferrer"
                       aria-label="Google Mapで開く"

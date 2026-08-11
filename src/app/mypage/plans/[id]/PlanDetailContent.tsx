@@ -12,7 +12,8 @@ import {
   updatePlanItemDay,
 } from "@/lib/plans";
 import { getSavedSpots } from "@/lib/storage";
-import { googleMapsUrl, youtubeWatchUrl } from "@/lib/links";
+import { youtubeWatchUrl } from "@/lib/links";
+import { spotDisplayName, spotMapsUrl } from "@/lib/spots";
 import ShareButtons from "@/components/ShareButtons";
 import Alert from "@/components/Alert";
 import type { Plan, PlanItem, SavedSpot } from "@/lib/types";
@@ -146,7 +147,12 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
         .map(
           ([day, dayItems]) =>
             `${day}日目: ` +
-            dayItems.map((item) => spotsById.get(item.spotId)?.spotName ?? "").join("、"),
+            dayItems
+              .map((item) => {
+                const spot = spotsById.get(item.spotId);
+                return spot ? spotDisplayName(spot) : "";
+              })
+              .join("、"),
         )
         .join("\n")
     : "";
@@ -184,7 +190,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                       <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
                         <Image
                           src={spot.thumbnailUrl}
-                          alt={spot.spotName}
+                          alt={spotDisplayName(spot)}
                           fill
                           sizes="64px"
                           className="object-cover"
@@ -192,11 +198,11 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                       </div>
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-sm font-medium text-stone-800">
-                          {spot.spotName}
+                          {spotDisplayName(spot)}
                         </p>
                         <div className="flex flex-wrap gap-2 text-xs">
                           <a
-                            href={googleMapsUrl(spot.address || spot.spotName)}
+                            href={spotMapsUrl(spot)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-brand-600 hover:underline"
@@ -282,13 +288,15 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                 <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
                   <Image
                     src={spot.thumbnailUrl}
-                    alt={spot.spotName}
+                    alt={spotDisplayName(spot)}
                     fill
                     sizes="64px"
                     className="object-cover"
                   />
                 </div>
-                <p className="min-w-0 flex-1 truncate text-sm text-stone-800">{spot.spotName}</p>
+                <p className="min-w-0 flex-1 truncate text-sm text-stone-800">
+                  {spotDisplayName(spot)}
+                </p>
                 <select
                   value={addDay[spot.id] ?? 1}
                   onChange={(event) =>
