@@ -75,12 +75,12 @@ export default function SavedSpotsList() {
                 key={spot.id}
                 className="flex gap-4 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
               >
-                <div className="relative h-24 w-36 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100 sm:h-28 sm:w-44">
+                <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100 sm:h-28 sm:w-44">
                   <Image
                     src={spot.thumbnailUrl}
                     alt={spot.videoTitle}
                     fill
-                    sizes="(max-width: 640px) 144px, 176px"
+                    sizes="(max-width: 640px) 96px, 176px"
                     className="object-cover"
                   />
                 </div>
