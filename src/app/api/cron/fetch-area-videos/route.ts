@@ -6,6 +6,7 @@ import {
   getFetchProgressOrderedByStaleness,
   listBlockedChannels,
   recordFetchProgress,
+  refreshVideoCount,
   upsertAreaVideos,
 } from "@/lib/areaVideos";
 import {
@@ -49,6 +50,24 @@ const PAGES_FULL = 3;
 const PAGES_MAINTENANCE = 1;
 // ""=総合クエリ、それ以外はジャンルを混ぜたクエリ。
 const QUERY_VARIANTS: (string | null)[] = [null, ...GENRES];
+
+// 1都道府県あたりの目標件数。これに達した県はそこで打ち切り、余った
+// クォータを他の県に回す。
+//
+// これが無かった頃は、件数に関係なく必ず11変化×3ページ＝3,300ユニットを
+// 使い切っていたため、1日の予算8,000で2県分しか処理できなかった。動画が
+// 豊富な県は3,300ユニットを使い切るずっと手前で十分な件数が集まるので、
+// そこで切り上げれば同じ予算でより多くの県を埋められる。
+//
+// 判定には `area_fetch_progress.video_count`（保存済み件数）と、その実行で
+// 新たに集めた件数の合計を使う。集めた分には保存済みと重複するものが
+// 含まれうるため厳密な件数ではないが、あくまでクォータ配分のための
+// 目安なので概算で構わない（次回以降の実行で自然に埋まる）。
+const TARGET_VIDEOS_PER_PREFECTURE = 700;
+
+// ある県に着手するために最低限残っていてほしい予算（全ジャンルの1ページ目を
+// 回せるだけ）。これ未満なら中途半端に始めず、その回は終了する。
+const MIN_UNITS_TO_START_PREFECTURE = QUERY_VARIANTS.length * UNITS_PER_CALL;
 
 async function fetchPage(
   prefecture: Prefecture,
@@ -114,6 +133,8 @@ interface PrefectureRunResult {
   /** ブロックしたチャンネルの動画なので取り込まなかった件数。 */
   droppedByChannel: number;
   unitsUsedSoFar: number;
+  /** 予算切れで途中打ち切りになった（次回やり直す）。 */
+  interrupted?: boolean;
 }
 
 export async function GET(request: NextRequest) {
@@ -149,25 +170,55 @@ export async function GET(request: NextRequest) {
   const blockedChannels = await listBlockedChannels().catch(() => new Set<string>());
 
   const results: PrefectureRunResult[] = [];
+  // すでに目標件数に達していて、今回は何もしなかった県。
+  const skippedAsSatisfied: Prefecture[] = [];
   let unitsUsed = 0;
   let stoppedEarlyReason: string | null = null;
 
   outer: for (const progress of ordered) {
+    // すでに目標件数に達している県は、YouTubeを一切呼ばずに飛ばす。
+    // 浮いたクォータはこのあとの、まだ件数が足りない県に回る。
+    const shortfall = TARGET_VIDEOS_PER_PREFECTURE - progress.videoCount;
+    if (shortfall <= 0) {
+      skippedAsSatisfied.push(progress.prefecture);
+      continue;
+    }
+
     const mode: "full" | "maintenance" = progress.lastFetchedAt === null ? "full" : "maintenance";
     const pages = mode === "full" ? PAGES_FULL : PAGES_MAINTENANCE;
-    const estimatedCost = QUERY_VARIANTS.length * pages * UNITS_PER_CALL;
 
-    if (unitsUsed + estimatedCost > UNIT_BUDGET_PER_RUN) break;
+    // 着手できるだけの予算が残っているかだけを見る。
+    //
+    // 以前はここで最悪ケース（全ジャンル×全ページ＝3,300ユニット）を丸ごと
+    // 予約していたが、目標件数で早めに切り上げるようになると実際の消費は
+    // それよりずっと少なくなるため、予約が重すぎて「まだ2,000ユニット余って
+    // いるのに次の県に着手できない」という取りこぼしが出る。実際の消費に
+    // 応じて詰め込めるよう、予約は「全ジャンルの1ページ目だけは回せる」
+    // 最低ラインに留め、以降は1呼び出しごとに残高を確認する。
+    if (unitsUsed + MIN_UNITS_TO_START_PREFECTURE > UNIT_BUDGET_PER_RUN) break;
 
     const collected = new Map<string, VideoResult>();
+    // 予算切れで途中打ち切りになったか。この場合その県は「取得済み」には
+    // せず、次回の実行で最初からやり直す。
+    let budgetExhausted = false;
 
-    for (const genre of QUERY_VARIANTS) {
+    genres: for (const genre of QUERY_VARIANTS) {
+      if (collected.size >= shortfall) break;
+
       let pageToken: string | undefined;
       for (let page = 0; page < pages; page++) {
+        if (unitsUsed + UNITS_PER_CALL > UNIT_BUDGET_PER_RUN) {
+          budgetExhausted = true;
+          stoppedEarlyReason = `1回あたりのクォータ上限（${UNIT_BUDGET_PER_RUN}ユニット）に達したため中断しました。${progress.prefecture}は取得途中なので次回やり直します。`;
+          break genres;
+        }
+
         try {
           const { items, nextPageToken } = await fetchPage(progress.prefecture, genre, apiKey, pageToken);
           unitsUsed += UNITS_PER_CALL;
           for (const item of items) collected.set(item.videoId, item);
+          // 目標に届いたらこの県は打ち切って次の県へ。
+          if (collected.size >= shortfall) break genres;
           if (!nextPageToken) break;
           pageToken = nextPageToken;
         } catch (error) {
@@ -218,7 +269,15 @@ export async function GET(request: NextRequest) {
         await upsertAreaVideos(progress.prefecture, [...collected.values()]);
       }
     }
-    await recordFetchProgress(progress.prefecture);
+
+    if (budgetExhausted) {
+      // 取れた分は保存するが「取得済み」にはしない（`last_fetched_at` を
+      // 更新しない）ので、次回の実行でこの県が本格取得からやり直される。
+      // 件数だけは実態に合わせておく。
+      await refreshVideoCount(progress.prefecture);
+    } else {
+      await recordFetchProgress(progress.prefecture);
+    }
 
     results.push({
       prefecture: progress.prefecture,
@@ -227,16 +286,26 @@ export async function GET(request: NextRequest) {
       droppedByCategory,
       droppedByChannel,
       unitsUsedSoFar: unitsUsed,
+      ...(budgetExhausted ? { interrupted: true } : {}),
     });
+
+    if (budgetExhausted) break;
   }
 
-  const processedThisRun = new Set(results.map((r) => r.prefecture));
+  // 目標件数に達していて飛ばした県も「もう取得しなくてよい県」なので、
+  // 未処理として残っている扱いにはしない。
+  const handledThisRun = new Set<Prefecture>([
+    ...results.map((r) => r.prefecture),
+    ...skippedAsSatisfied,
+  ]);
   const allComplete = ordered.every(
-    (p) => p.lastFetchedAt !== null || processedThisRun.has(p.prefecture),
+    (p) => p.lastFetchedAt !== null || handledThisRun.has(p.prefecture),
   );
 
   return NextResponse.json({
     processed: results,
+    targetPerPrefecture: TARGET_VIDEOS_PER_PREFECTURE,
+    skippedAsSatisfied,
     totalUnitsUsed: unitsUsed,
     stoppedEarlyReason,
     allComplete,
