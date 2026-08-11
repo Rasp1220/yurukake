@@ -73,7 +73,7 @@ export default function SavedSpotsList() {
             {spots.map((spot, index) => (
               <div
                 key={spot.id}
-                className="flex gap-4 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
+                className="flex items-center gap-4 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
               >
                 <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100 sm:h-28 sm:w-44">
                   <Image
