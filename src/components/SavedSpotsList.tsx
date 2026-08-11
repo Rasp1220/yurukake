@@ -95,9 +95,11 @@ export default function SavedSpotsList() {
                           </span>
                         )}
                       </p>
-                      <p className="line-clamp-1 text-xs text-stone-500">
-                        {spot.address || "住所未設定"}
-                      </p>
+                      {/* 住所の入力欄は廃止したため、以前に住所を入れて保存した
+                          スポットだけこの行が出る（新規保存では常に空になる）。 */}
+                      {spot.address && (
+                        <p className="line-clamp-1 text-xs text-stone-500">{spot.address}</p>
+                      )}
                     </div>
                     <button
                       onClick={() => handleRemove(spot.id)}

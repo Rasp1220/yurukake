@@ -1,4 +1,4 @@
-import { PREFECTURES, PREFECTURE_ALIASES, prefectureFullName, type Prefecture } from "./prefectures";
+import { PREFECTURES, PREFECTURE_ALIASES, type Prefecture } from "./prefectures";
 import {
   IRRELEVANT_VIDEO_CATEGORY_IDS,
   IRRELEVANT_VIDEO_KEYWORDS,
@@ -82,33 +82,6 @@ export function belongsToPrefecture(
   prefecture: Prefecture,
 ): boolean {
   return judgeArea(title, description, prefecture) === "match";
-}
-
-/**
- * 動画のタイトル・説明文から、住所・エリア欄の初期値になりそうな地名を推測する
- * （「行きたいリストに追加」モーダルの住所欄プリフィル用）。
- *
- * タイトル→説明文の順に、都道府県よりも先に主要都市・エリア名（`PREFECTURE_ALIASES`）
- * で探す。エリア名の方が「東京都渋谷」のように具体的な住所に近く、`judgeArea` と
- * 違って複数県への言及があっても構わない（最初に見つかった1件をそのまま出すだけの
- * 補助入力であり、動画の都道府県判定のような厳密さは不要なため）。見つからなければ
- * 都道府県名だけで探し、それも無ければ `null`（欄は空のまま、利用者が手入力する）。
- */
-export function guessLocation(title: string, description: string): string | null {
-  for (const text of [normalize(title), normalize(description)]) {
-    for (const prefecture of PREFECTURES) {
-      const alias = PREFECTURE_ALIASES[prefecture].find((needle) => text.includes(needle));
-      if (alias) return `${prefectureFullName(prefecture)}${alias}`;
-    }
-  }
-
-  for (const text of [normalize(title), normalize(description)]) {
-    for (const prefecture of PREFECTURES) {
-      if (text.includes(prefecture)) return prefectureFullName(prefecture);
-    }
-  }
-
-  return null;
 }
 
 // YouTube検索は都道府県名やジャンル語が緩くマッチするだけで採用してしまうため、

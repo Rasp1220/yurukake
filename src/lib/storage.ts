@@ -37,8 +37,11 @@ export async function getSavedSpots(): Promise<SavedSpot[]> {
   return (data as SpotRow[]).map(fromRow);
 }
 
+// 住所は入力欄を廃止したため、保存時には指定しない（空文字で入れる）。列と
+// SavedSpot.address は、それ以前に保存されたスポットの住所を表示・Google Map
+// 連携に使い続けるために残してある。
 export async function addSavedSpot(
-  spot: Omit<SavedSpot, "id" | "savedAt">,
+  spot: Omit<SavedSpot, "id" | "savedAt" | "address">,
 ): Promise<SavedSpot> {
   const supabase = createClient();
   const { data, error } = await supabase
@@ -48,7 +51,7 @@ export async function addSavedSpot(
       video_title: spot.videoTitle,
       thumbnail_url: spot.thumbnailUrl,
       spot_name: spot.spotName,
-      address: spot.address,
+      address: "",
       genre: spot.genre,
     })
     .select()

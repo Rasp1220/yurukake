@@ -57,15 +57,6 @@ export function isPrefecture(value: string): value is Prefecture {
   return (PREFECTURES as readonly string[]).includes(value);
 }
 
-// 住所表記に使う正式名（「東京」→「東京都」など）。都道府県名は
-// PREFECTURES に短縮形で入っているため、表示用にはこちらを使う。
-export function prefectureFullName(prefecture: Prefecture): string {
-  if (prefecture === "北海道") return prefecture;
-  if (prefecture === "東京") return "東京都";
-  if (prefecture === "京都" || prefecture === "大阪") return `${prefecture}府`;
-  return `${prefecture}県`;
-}
-
 // 都道府県名そのもの以外に「その都道府県を指す」とみなす主要都市・エリア名。
 // 「札幌グルメ10選」のように県名を出さないタイトルは多いため、これが無いと
 // 取り込み時の都道府県チェック（`src/lib/areaRelevance.ts`）で本来残すべき

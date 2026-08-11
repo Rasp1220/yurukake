@@ -6,7 +6,6 @@ import { Icon } from "@iconify/react";
 import type { VideoResult } from "@/lib/types";
 import { addSavedSpot } from "@/lib/storage";
 import { createClient } from "@/lib/supabase/client";
-import { guessLocation } from "@/lib/areaRelevance";
 import Alert from "@/components/Alert";
 import { GENRES, MAX_LENGTH } from "@/lib/constants";
 
@@ -20,11 +19,6 @@ export default function SaveModal({
   onSaved: () => void;
 }) {
   const [spotName, setSpotName] = useState("");
-  // 動画のタイトル・説明文から地名を推測できれば、住所欄の初期値として
-  // 入れておく（あくまで推測なので、欄は引き続き自由に編集・削除できる）。
-  const [address, setAddress] = useState(
-    () => guessLocation(video.title, video.description) ?? "",
-  );
   const [genre, setGenre] = useState<string | null>(null);
   const [status, setStatus] = useState<"idle" | "saving" | "error">("idle");
   const [errorMessage, setErrorMessage] = useState("");
@@ -45,7 +39,6 @@ export default function SaveModal({
         videoTitle: video.title,
         thumbnailUrl: video.thumbnailUrl,
         spotName: spotName.trim() || video.title,
-        address: address.trim(),
         genre,
       });
       onSaved();
@@ -106,19 +99,6 @@ export default function SaveModal({
               value={spotName}
               onChange={(event) => setSpotName(event.target.value)}
               placeholder="未入力の場合は動画タイトルを使用します"
-              maxLength={MAX_LENGTH.SHORT}
-              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">
-              住所・エリア（任意）
-            </label>
-            <input
-              type="text"
-              value={address}
-              onChange={(event) => setAddress(event.target.value)}
-              placeholder="例：東京都台東区浅草"
               maxLength={MAX_LENGTH.SHORT}
               className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
