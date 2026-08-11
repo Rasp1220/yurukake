@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { Icon } from "@iconify/react";
 import { getSavedSpots, removeSavedSpot } from "@/lib/storage";
 import { googleMapsUrl, youtubeWatchUrl } from "@/lib/links";
 import Alert from "@/components/Alert";
@@ -68,59 +69,67 @@ export default function SavedSpotsList() {
       ) : (
         <>
           {origin && <ShareButtons text={shareText} url={origin} />}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <div className="flex flex-col gap-3">
             {spots.map((spot, index) => (
               <div
                 key={spot.id}
-                className="flex gap-3 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
+                className="flex gap-4 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
               >
-                <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
+                <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100 sm:h-28 sm:w-44">
                   <Image
                     src={spot.thumbnailUrl}
                     alt={spot.videoTitle}
                     fill
-                    sizes="96px"
+                    sizes="(max-width: 640px) 96px, 176px"
                     className="object-cover"
                   />
                 </div>
                 <div className="flex flex-1 flex-col justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-brand-600">
-                      #{index + 1} {spot.spotName}
-                      {spot.genre && (
-                        <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
-                          {spot.genre}
-                        </span>
-                      )}
-                    </p>
-                    <p className="line-clamp-1 text-xs text-stone-500">
-                      {spot.address || "住所未設定"}
-                    </p>
-                    <div className="mt-1 flex flex-wrap gap-2 text-xs">
-                      <a
-                        href={googleMapsUrl(spot.address || spot.spotName)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-brand-600 hover:underline"
-                      >
-                        Google Mapで開く
-                      </a>
-                      <a
-                        href={youtubeWatchUrl(spot.videoId)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-brand-600 hover:underline"
-                      >
-                        YouTubeで見る
-                      </a>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="text-sm font-semibold text-brand-600">
+                        #{index + 1} {spot.spotName}
+                        {spot.genre && (
+                          <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
+                            {spot.genre}
+                          </span>
+                        )}
+                      </p>
+                      <p className="line-clamp-1 text-xs text-stone-500">
+                        {spot.address || "住所未設定"}
+                      </p>
                     </div>
+                    <button
+                      onClick={() => handleRemove(spot.id)}
+                      aria-label="リストから削除"
+                      title="リストから削除"
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-stone-400 transition hover:bg-red-50 hover:text-red-500"
+                    >
+                      <Icon icon="mdi:trash-can-outline" className="h-4 w-4" />
+                    </button>
                   </div>
-                  <button
-                    onClick={() => handleRemove(spot.id)}
-                    className="self-start text-xs text-stone-400 hover:text-red-500"
-                  >
-                    リストから削除
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <a
+                      href={googleMapsUrl(spot.address || spot.spotName)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="Google Mapで開く"
+                      title="Google Mapで開く"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-brand-600 transition hover:bg-orange-100"
+                    >
+                      <Icon icon="mdi:google-maps" className="h-5 w-5" />
+                    </a>
+                    <a
+                      href={youtubeWatchUrl(spot.videoId)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label="YouTubeで見る"
+                      title="YouTubeで見る"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-brand-600 transition hover:bg-orange-100"
+                    >
+                      <Icon icon="mdi:youtube" className="h-5 w-5" />
+                    </a>
+                  </div>
                 </div>
               </div>
             ))}

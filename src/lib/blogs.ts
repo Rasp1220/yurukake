@@ -45,23 +45,37 @@ function blogBlockFromRow(row: BlogBlockRow): BlogBlock {
   };
 }
 
+/** マイページのブログ一覧用。他人のブログ（公開済みのもの）は含めず、自分のブログだけを返す。 */
 export async function getBlogs(): Promise<Blog[]> {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("ログインが必要です");
+
   const { data, error } = await supabase
     .from("blogs")
     .select("*")
+    .eq("user_id", user.id)
     .order("created_at", { ascending: false });
 
   if (error) throwSupabaseError(error, "ブログの読み込みに失敗しました");
   return (data as BlogRow[]).map(blogFromRow);
 }
 
+/** マイページの編集画面用。他人のブログ（公開済みのもの）は編集対象にしないよう、自分のブログだけを取得する。 */
 export async function getBlog(blogId: string): Promise<Blog | null> {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("ログインが必要です");
+
   const { data, error } = await supabase
     .from("blogs")
     .select("*")
     .eq("id", blogId)
+    .eq("user_id", user.id)
     .maybeSingle();
 
   if (error) throwSupabaseError(error, "ブログの読み込みに失敗しました");

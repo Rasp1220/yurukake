@@ -23,11 +23,11 @@ export default function SearchBar({ initialQuery = "" }: { initialQuery?: string
         onChange={(event) => setQuery(event.target.value)}
         placeholder="例：浅草 カフェ"
         maxLength={MAX_LENGTH.SHORT}
-        className="w-full rounded-full border border-orange-200 bg-white px-5 py-3 text-base shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+        className="w-full min-w-0 rounded-full border border-orange-200 bg-white px-5 py-3 text-base shadow-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
       />
       <button
         type="submit"
-        className="rounded-full bg-brand-600 px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-brand-700"
+        className="flex-shrink-0 whitespace-nowrap rounded-full bg-brand-600 px-6 py-3 font-semibold text-white shadow-sm transition hover:bg-brand-700"
       >
         検索
       </button>
