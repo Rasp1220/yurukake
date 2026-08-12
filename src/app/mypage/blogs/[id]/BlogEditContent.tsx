@@ -6,7 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { Icon } from "@iconify/react";
 import Alert from "@/components/Alert";
-import { MAX_LENGTH } from "@/lib/constants";
+import { MAX_IMAGES_PER_BLOCK, MAX_LENGTH } from "@/lib/constants";
+import { parseImageBlockUrls, stringifyImageBlockUrls } from "@/lib/blogImageBlock";
 import {
   addBlogBlock,
   getBlog,
@@ -35,12 +36,14 @@ const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
 const BLOCK_LABELS: Record<BlogBlockType, string> = {
   text: "テキスト",
   image: "画像",
+  images: "複数画像",
   video: "動画",
 };
 
 const BLOCK_ICONS: Record<BlogBlockType, string> = {
   text: "mdi:text-box-outline",
   image: "mdi:image-outline",
+  images: "mdi:image-multiple-outline",
   video: "mdi:video-outline",
 };
 
@@ -225,6 +228,67 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
     }
   }
 
+  async function handleImagesAdd(
+    blockId: string,
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length === 0) return;
+
+    const block = blocks.find((b) => b.id === blockId);
+    if (!block) return;
+    const currentUrls = parseImageBlockUrls(block.content);
+    const remaining = MAX_IMAGES_PER_BLOCK - currentUrls.length;
+    if (remaining <= 0) {
+      reportError(null, `複数画像パーツには最大${MAX_IMAGES_PER_BLOCK}枚までしか設定できません`);
+      return;
+    }
+    const filesToUpload = files.slice(0, remaining);
+
+    setBusyBlockId(blockId);
+    try {
+      const uploadedUrls: string[] = [];
+      for (const file of filesToUpload) {
+        uploadedUrls.push(await uploadBlogMedia(file));
+      }
+      const content = stringifyImageBlockUrls([...currentUrls, ...uploadedUrls]);
+      await updateBlogBlockContent(blockId, content);
+      setBlocks((current) =>
+        current.map((b) => (b.id === blockId ? { ...b, content } : b)),
+      );
+      if (files.length > filesToUpload.length) {
+        reportError(
+          null,
+          `複数画像パーツには最大${MAX_IMAGES_PER_BLOCK}枚までのため、一部の画像は追加されませんでした`,
+        );
+      }
+    } catch (error) {
+      reportError(error, "アップロードに失敗しました");
+    } finally {
+      setBusyBlockId(null);
+    }
+  }
+
+  async function handleImageRemoveAt(blockId: string, index: number) {
+    const block = blocks.find((b) => b.id === blockId);
+    if (!block) return;
+    const content = stringifyImageBlockUrls(
+      parseImageBlockUrls(block.content).filter((_, i) => i !== index),
+    );
+    setBusyBlockId(blockId);
+    try {
+      await updateBlogBlockContent(blockId, content);
+      setBlocks((current) =>
+        current.map((b) => (b.id === blockId ? { ...b, content } : b)),
+      );
+    } catch (error) {
+      reportError(error, "画像の削除に失敗しました");
+    } finally {
+      setBusyBlockId(null);
+    }
+  }
+
   if (status === "loading") return null;
 
   if (status === "not-found") {
@@ -353,7 +417,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
       <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
         <h2 className="mb-1 font-semibold text-stone-800">本文パーツ</h2>
         <p className="mb-4 text-xs text-stone-500">
-          テキスト・画像・動画のパーツを好きな順番で組み合わせて本文を作れます。↑↓で並び替え、削除ボタンで取り除けます。
+          テキスト・画像・複数画像・動画のパーツを好きな順番で組み合わせて本文を作れます。↑↓で並び替え、削除ボタンで取り除けます。
         </p>
 
         {blocks.length === 0 && (
@@ -466,6 +530,64 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                 </div>
               )}
 
+              {block.type === "images" &&
+                (() => {
+                  const urls = parseImageBlockUrls(block.content);
+                  const atLimit = urls.length >= MAX_IMAGES_PER_BLOCK;
+                  return (
+                    <div className="flex flex-col gap-2">
+                      {urls.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {urls.map((url, index) => (
+                            <div key={`${block.id}-${index}`} className="relative">
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={url}
+                                alt=""
+                                loading="lazy"
+                                className="h-24 w-24 rounded-lg object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleImageRemoveAt(block.id, index)}
+                                disabled={busyBlockId === block.id}
+                                aria-label="この画像を削除"
+                                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-stone-800/80 text-xs text-white hover:bg-red-500 disabled:opacity-60"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
+                          画像が未設定です
+                        </p>
+                      )}
+                      <div className="flex flex-wrap items-center gap-2">
+                        <label
+                          className={`cursor-pointer self-start rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50 ${
+                            atLimit ? "cursor-not-allowed opacity-60" : ""
+                          }`}
+                        >
+                          {busyBlockId === block.id ? "アップロード中..." : "画像を追加"}
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            disabled={busyBlockId === block.id || atLimit}
+                            onChange={(event) => handleImagesAdd(block.id, event)}
+                          />
+                        </label>
+                        <p className="text-xs text-stone-400">
+                          {urls.length}/{MAX_IMAGES_PER_BLOCK}枚（表示時はスライダーで横スクロールできます）
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })()}
+
               {block.type === "video" && (
                 <div className="flex flex-col gap-2">
                   {block.content ? (
@@ -512,6 +634,13 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
             className="rounded-full border border-dashed border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50"
           >
             + 画像を追加
+          </button>
+          <button
+            type="button"
+            onClick={() => handleAddBlock("images")}
+            className="rounded-full border border-dashed border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50"
+          >
+            + 複数画像を追加
           </button>
           <button
             type="button"

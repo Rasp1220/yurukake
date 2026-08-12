@@ -181,3 +181,6 @@ export const MAX_LENGTH = {
 
 // プロフィールの自由URL欄（Webサイトなど）の最大枠数。
 export const MAX_PROFILE_LINKS = 3;
+
+// 複数画像パーツ（type: "images"）に設定できる画像の最大枚数。
+export const MAX_IMAGES_PER_BLOCK = 10;

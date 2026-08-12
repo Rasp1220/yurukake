@@ -58,7 +58,7 @@ export interface BlogSearchResult extends Blog {
   authorDisplayName: string | null;
 }
 
-export type BlogBlockType = "text" | "image" | "video";
+export type BlogBlockType = "text" | "image" | "images" | "video";
 
 export interface BlogBlock {
   id: string;

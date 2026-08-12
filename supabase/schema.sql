@@ -796,18 +796,26 @@ create policy "Users can delete their own blogs"
   on public.blogs for delete
   using (auth.uid() = user_id);
 
--- type: 'text'（TinyMCEのHTML）／'image'／'video'（アップロードしたファイルのURL）。
--- content にHTMLまたはURLをそのまま保存する（パーツの種類ごとにテーブルを
--- 分けるほどの複雑さがないため、1テーブルにまとめている）。
+-- type: 'text'（TinyMCEのHTML）／'image'（単一画像URL）／'images'（複数画像、
+-- 最大10枚のURLをJSON配列文字列にして格納。例: '["https://...","https://..."]'）
+-- ／'video'（アップロードしたファイルのURL）。
+-- content にHTMLまたはURL（の配列）をそのまま保存する（パーツの種類ごとに
+-- テーブルを分けるほどの複雑さがないため、1テーブルにまとめている）。
 create table if not exists public.blog_blocks (
   id uuid primary key default gen_random_uuid(),
   blog_id uuid not null references public.blogs (id) on delete cascade,
   user_id uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  type text not null check (type in ('text', 'image', 'video')),
+  type text not null check (type in ('text', 'image', 'images', 'video')),
   content text not null default '',
   sort_order integer not null default 0,
   created_at timestamptz not null default now()
 );
+
+-- 既存DBでは上のcheck制約（テーブル作成時に固定）が更新されないため、
+-- 'images'を許可するように明示的に張り替える。
+alter table public.blog_blocks drop constraint if exists blog_blocks_type_check;
+alter table public.blog_blocks add constraint blog_blocks_type_check
+  check (type in ('text', 'image', 'images', 'video'));
 
 create index if not exists blog_blocks_blog_id_idx on public.blog_blocks (blog_id);
 
