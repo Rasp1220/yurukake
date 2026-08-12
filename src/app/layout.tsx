@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import NavBar from "@/components/NavBar";
+import Footer from "@/components/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,6 +21,7 @@ export default function RootLayout({
         <main className="mx-auto min-h-[calc(100vh-57px)] max-w-7xl px-4 py-8">
           {children}
         </main>
+        <Footer />
       </body>
     </html>
   );
