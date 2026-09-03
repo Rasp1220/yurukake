@@ -1060,6 +1060,34 @@ as $$
   )::integer;
 $$;
 
+-- 汎用のON/OFFフラグ置き場。ヘッダーの「ログイン」リンク・「新規登録」ボタンの
+-- 表示可否を、コードのデプロイなしにDBの値の書き換えだけで切り替えられるように
+-- するためのテーブル。key/enabledの単純な組にしてあるのは、今後同じ仕組みで
+-- 他の機能もON/OFFしたくなったとき、行を追加するだけで対応できるようにするため。
+create table if not exists public.app_settings (
+  key text primary key,
+  enabled boolean not null default true
+);
+
+alter table public.app_settings enable row level security;
+
+-- NavBar（誰でも読める箇所）から参照するため、閲覧は誰でも許可する。書き込みは
+-- 管理者がSupabaseダッシュボードから直接行う運用のため、書き込みポリシーは
+-- 用意しない（=anon/authenticatedキーからは更新できない）。
+drop policy if exists "Anyone can read app settings" on public.app_settings;
+create policy "Anyone can read app settings"
+  on public.app_settings for select
+  using (true);
+
+-- ヘッダーの「ログイン」リンク・「新規登録」ボタンの表示可否。既定はtrue
+-- （表示する＝現状維持）。非表示にしたいときはSupabaseのSQL Editorやテーブル
+-- エディタから直接
+--   update public.app_settings set enabled = false where key = 'show_auth_buttons';
+-- を実行する。
+insert into public.app_settings (key, enabled)
+values ('show_auth_buttons', true)
+on conflict (key) do nothing;
+
 -- PostgREST（SupabaseのデータAPI）はテーブル定義をキャッシュしており、更新が
 -- 反映されるまで "Could not find the table 'public.xxx' in the schema cache" を
 -- 返し続けることがあります。最後にリロードを通知して即座に反映させます。
