@@ -49,8 +49,8 @@ export default async function NewSpotsPage({
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">{TITLES[kind ?? "all"]}</h1>
-        <p className="text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-slate-800">{TITLES[kind ?? "all"]}</h1>
+        <p className="text-sm text-slate-500">
           YouTube動画とお出かけブログを、種類を問わず公開日時の新しい順に表示します。
         </p>
       </div>
@@ -65,7 +65,7 @@ export default async function NewSpotsPage({
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                 active
                   ? "border-brand-600 bg-brand-600 text-white"
-                  : "border-orange-200 text-stone-600 hover:border-brand-300"
+                  : "border-brand-200 text-slate-600 hover:border-brand-300"
               }`}
             >
               {tab.label}
@@ -81,19 +81,19 @@ export default async function NewSpotsPage({
           <Link
             href={pageHref(kind, Math.max(1, page - 1))}
             aria-disabled={page <= 1}
-            className={`rounded-full border border-orange-200 px-4 py-2 text-sm font-medium text-stone-600 transition hover:border-brand-300 ${
+            className={`rounded-full border border-brand-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-brand-300 ${
               page <= 1 ? "pointer-events-none opacity-40" : ""
             }`}
           >
             前へ
           </Link>
-          <span className="text-sm text-stone-500">
+          <span className="text-sm text-slate-500">
             {page} / {totalPages} ページ
           </span>
           <Link
             href={pageHref(kind, Math.min(totalPages, page + 1))}
             aria-disabled={page >= totalPages}
-            className={`rounded-full border border-orange-200 px-4 py-2 text-sm font-medium text-stone-600 transition hover:border-brand-300 ${
+            className={`rounded-full border border-brand-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-brand-300 ${
               page >= totalPages ? "pointer-events-none opacity-40" : ""
             }`}
           >

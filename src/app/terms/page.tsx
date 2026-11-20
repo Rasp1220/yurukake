@@ -4,7 +4,7 @@ export const metadata = {
 
 export default function TermsPage() {
   return (
-    <article className="mx-auto max-w-3xl space-y-8 text-stone-700">
+    <article className="mx-auto max-w-3xl space-y-8 text-slate-700">
       <h1 className="text-2xl font-bold text-brand-600">利用規約</h1>
       <p>
         この利用規約（以下「本規約」といいます）は、「ゆるかけ」（以下「本サービス」といいます）の利用条件を定めるものです。
@@ -12,14 +12,14 @@ export default function TermsPage() {
       </p>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">第1条（適用）</h2>
+        <h2 className="text-lg font-semibold text-slate-900">第1条（適用）</h2>
         <p>
           本規約は、ユーザーと本サービス運営者との間の本サービスの利用に関わる一切の関係に適用されるものとします。
         </p>
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           第2条（利用登録）
         </h2>
         <p>
@@ -28,7 +28,7 @@ export default function TermsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           第3条（禁止事項）
         </h2>
         <p>
@@ -38,7 +38,7 @@ export default function TermsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           第4条（本サービスの提供の停止等）
         </h2>
         <p>
@@ -47,7 +47,7 @@ export default function TermsPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           第5条（規約の変更）
         </h2>
         <p>
@@ -55,7 +55,7 @@ export default function TermsPage() {
         </p>
       </section>
 
-      <p className="text-sm text-stone-400">制定日：2026年8月12日</p>
+      <p className="text-sm text-slate-400">制定日：2026年8月12日</p>
     </article>
   );
 }

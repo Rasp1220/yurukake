@@ -158,19 +158,19 @@ export default function ProfileContent() {
       <MyPageTabs />
 
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">プロフィール編集</h1>
-        <p className="text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-slate-800">プロフィール編集</h1>
+        <p className="text-sm text-slate-500">
           ここで設定した表示名・画像・タグ・SNSリンクで、公開したブログの一覧ページに表示されます。
         </p>
       </div>
 
       {status === "error" && <Alert>{errorMessage}</Alert>}
 
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+      <section className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
         <div className="mb-3 flex items-center gap-3">
           <AvatarImage src={profile?.avatarUrl ?? null} name={displayName} size={64} />
           <div className="flex flex-wrap items-center gap-2">
-            <label className="cursor-pointer rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
+            <label className="cursor-pointer rounded-full border border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50">
               {avatarUploading ? "処理中..." : profile?.avatarUrl ? "画像を変更" : "画像を選択"}
               <input
                 type="file"
@@ -185,14 +185,14 @@ export default function ProfileContent() {
                 type="button"
                 onClick={handleAvatarReset}
                 disabled={avatarUploading}
-                className="rounded-full border border-stone-200 px-4 py-2 text-sm font-medium text-stone-500 hover:bg-stone-50 disabled:opacity-60"
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-50 disabled:opacity-60"
               >
                 リセット
               </button>
             )}
           </div>
         </div>
-        <p className="mb-3 text-xs text-stone-400">
+        <p className="mb-3 text-xs text-slate-400">
           正方形の256×256pxにリサイズ・圧縮してアップロードされます（JPEG）。
         </p>
         <form onSubmit={handleProfileSave} className="flex flex-col gap-3">
@@ -202,7 +202,7 @@ export default function ProfileContent() {
             onChange={(event) => setDisplayName(event.target.value)}
             placeholder="表示名（例：はるか）"
             maxLength={MAX_LENGTH.PROFILE}
-            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="w-full rounded-full border border-brand-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
 
           <div>
@@ -212,9 +212,9 @@ export default function ProfileContent() {
               placeholder="プロフィール一言（例：週末は関東近郊のカフェ巡りをしています）"
               maxLength={MAX_LENGTH.PROFILE}
               rows={2}
-              className="w-full resize-none rounded-2xl border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              className="w-full resize-none rounded-2xl border border-brand-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
-            <p className="mt-1 text-right text-xs text-stone-400">
+            <p className="mt-1 text-right text-xs text-slate-400">
               {bio.length}/{MAX_LENGTH.PROFILE}
             </p>
           </div>
@@ -228,7 +228,7 @@ export default function ProfileContent() {
                 className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                   tags.includes(tag)
                     ? "border-brand-600 bg-brand-600 text-white"
-                    : "border-orange-200 text-stone-600 hover:border-brand-300"
+                    : "border-brand-200 text-slate-600 hover:border-brand-300"
                 }`}
               >
                 {tag}
@@ -237,7 +237,7 @@ export default function ProfileContent() {
           </div>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div className="flex items-center rounded-full border border-orange-200 bg-white pl-4 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
+            <div className="flex items-center rounded-full border border-brand-200 bg-white pl-4 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
               <SnsPrefix icon="ri:twitter-x-fill" prefix="x.com/" />
               <input
                 type="text"
@@ -248,7 +248,7 @@ export default function ProfileContent() {
                 className="w-full rounded-full bg-transparent px-2 py-2 text-sm outline-none"
               />
             </div>
-            <div className="flex items-center rounded-full border border-orange-200 bg-white pl-4 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
+            <div className="flex items-center rounded-full border border-brand-200 bg-white pl-4 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
               <SnsPrefix icon="mdi:instagram" prefix="instagram.com/" />
               <input
                 type="text"
@@ -259,7 +259,7 @@ export default function ProfileContent() {
                 className="w-full rounded-full bg-transparent px-2 py-2 text-sm outline-none"
               />
             </div>
-            <div className="flex items-center rounded-full border border-orange-200 bg-white pl-4 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
+            <div className="flex items-center rounded-full border border-brand-200 bg-white pl-4 focus-within:border-brand-500 focus-within:ring-2 focus-within:ring-brand-100">
               <SnsPrefix icon="mdi:youtube" prefix="youtube.com/@" />
               <input
                 type="text"
@@ -273,7 +273,7 @@ export default function ProfileContent() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <p className="text-xs font-medium text-stone-600">
+            <p className="text-xs font-medium text-slate-600">
               リンク（Webサイト・ポートフォリオなど、最大{MAX_PROFILE_LINKS}件）
             </p>
             {links.map((link, index) => (
@@ -284,7 +284,7 @@ export default function ProfileContent() {
                   onChange={(event) => updateLink(index, { label: event.target.value })}
                   placeholder="ラベル（例：ポートフォリオ）"
                   maxLength={MAX_LENGTH.PROFILE}
-                  className="w-28 flex-shrink-0 rounded-full border border-orange-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 sm:w-36"
+                  className="w-28 flex-shrink-0 rounded-full border border-brand-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100 sm:w-36"
                 />
                 <input
                   type="text"
@@ -292,13 +292,13 @@ export default function ProfileContent() {
                   onChange={(event) => updateLink(index, { url: event.target.value })}
                   placeholder="URL（例：example.com）"
                   maxLength={MAX_LENGTH.PROFILE}
-                  className="w-full min-w-0 rounded-full border border-orange-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+                  className="w-full min-w-0 rounded-full border border-brand-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
                 />
                 <button
                   type="button"
                   onClick={() => removeLink(index)}
                   aria-label="このリンクを削除"
-                  className="flex-shrink-0 rounded-full border border-stone-200 p-2 text-stone-400 hover:border-red-300 hover:text-red-500"
+                  className="flex-shrink-0 rounded-full border border-slate-200 p-2 text-slate-400 hover:border-red-300 hover:text-red-500"
                 >
                   <Icon icon="mdi:close" className="h-4 w-4" />
                 </button>
@@ -308,7 +308,7 @@ export default function ProfileContent() {
               <button
                 type="button"
                 onClick={addLink}
-                className="self-start rounded-full border border-dashed border-orange-300 px-4 py-1.5 text-xs font-medium text-brand-600 hover:bg-orange-50"
+                className="self-start rounded-full border border-dashed border-brand-300 px-4 py-1.5 text-xs font-medium text-brand-600 hover:bg-brand-50"
               >
                 + リンクを追加
               </button>
@@ -345,7 +345,7 @@ export default function ProfileContent() {
 
 function SnsPrefix({ icon, prefix }: { icon: string; prefix: string }) {
   return (
-    <span className="flex flex-shrink-0 items-center gap-1 text-xs text-stone-400">
+    <span className="flex flex-shrink-0 items-center gap-1 text-xs text-slate-400">
       <Icon icon={icon} className="h-4 w-4" />
       {prefix}
     </span>

@@ -64,8 +64,8 @@ export default function PlansListContent() {
       <MyPageTabs />
 
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">お出かけプラン</h1>
-        <p className="text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-slate-800">お出かけプラン</h1>
+        <p className="text-sm text-slate-500">
           行きたいリストのスポットを日程ごとに組み込んで、旅のしおりを作れます。
         </p>
       </div>
@@ -79,7 +79,7 @@ export default function PlansListContent() {
           onChange={(event) => setNewTitle(event.target.value)}
           placeholder="例：週末の浅草さんぽ"
           maxLength={MAX_LENGTH.SHORT}
-          className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+          className="w-full rounded-full border border-brand-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
         />
         <button
           type="submit"
@@ -91,7 +91,7 @@ export default function PlansListContent() {
       </form>
 
       {plans.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-orange-200 bg-orange-50 py-12 text-center text-stone-500">
+        <p className="rounded-2xl border border-dashed border-brand-200 bg-brand-50 py-12 text-center text-slate-500">
           まだプランがありません。上のフォームから作成してみましょう。
         </p>
       ) : (
@@ -99,17 +99,17 @@ export default function PlansListContent() {
           {plans.map((plan) => (
             <div
               key={plan.id}
-              className="flex items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm"
+              className="flex items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-white p-4 shadow-sm"
             >
               <Link href={`/mypage/plans/${plan.id}`} className="flex-1">
-                <p className="font-semibold text-stone-800 hover:text-brand-600">{plan.title}</p>
-                <p className="text-xs text-stone-400">
+                <p className="font-semibold text-slate-800 hover:text-brand-600">{plan.title}</p>
+                <p className="text-xs text-slate-400">
                   {new Date(plan.createdAt).toLocaleDateString("ja-JP")} 作成
                 </p>
               </Link>
               <button
                 onClick={() => handleDelete(plan.id)}
-                className="text-xs text-stone-400 hover:text-red-500"
+                className="text-xs text-slate-400 hover:text-red-500"
               >
                 削除
               </button>
@@ -118,7 +118,7 @@ export default function PlansListContent() {
         </div>
       )}
 
-      <hr className="border-orange-100" />
+      <hr className="border-brand-100" />
 
       <SavedSpotsList />
     </div>

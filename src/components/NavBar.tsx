@@ -21,15 +21,15 @@ export default async function NavBar() {
   const showAuthButtons = authButtonsSetting?.enabled ?? true;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-orange-100 bg-white/90 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
+    <header className="sticky top-0 z-20 border-b bg-background/90 backdrop-blur">
+      <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
         <div className="flex items-center gap-1">
           <HamburgerMenu />
-          <Link href="/" className="text-lg font-bold text-brand-600">
+          <Link href="/" className="font-display text-xl text-primary">
             ゆるかけ
           </Link>
         </div>
-        <nav className="flex items-center gap-4 text-sm font-medium text-stone-600">
+        <nav className="flex items-center gap-4 text-sm font-medium text-slate-600">
           <Link href="/search" className="hover:text-brand-600">
             さがす
           </Link>
@@ -46,28 +46,28 @@ export default async function NavBar() {
                 // タッチ端末ではホバーが無く、タップするとプロフィールへ遷移する
                 // だけなので、各ページ側の MyPageTabs から残りへ移動できる。
                 <div className="invisible absolute left-1/2 top-full z-30 -translate-x-1/2 pt-2 opacity-0 transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-                  <div className="w-36 rounded-xl border border-orange-100 bg-white p-1 shadow-lg">
+                  <div className="w-36 rounded-xl border border-brand-100 bg-white p-1 shadow-lg">
                     <Link
                       href="/mypage/profile"
-                      className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
+                      className="block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-brand-50 hover:text-brand-600"
                     >
                       プロフィール編集
                     </Link>
                     <Link
                       href="/mypage/blogs"
-                      className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
+                      className="block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-brand-50 hover:text-brand-600"
                     >
                       ブログ
                     </Link>
                     <Link
                       href="/mypage/account"
-                      className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
+                      className="block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-brand-50 hover:text-brand-600"
                     >
                       アカウント情報
                     </Link>
                     <Link
                       href="/mypage/plans"
-                      className="block rounded-lg px-3 py-2 text-sm text-stone-600 hover:bg-orange-50 hover:text-brand-600"
+                      className="block rounded-lg px-3 py-2 text-sm text-slate-600 hover:bg-brand-50 hover:text-brand-600"
                     >
                       お出かけプラン
                     </Link>
@@ -82,7 +82,7 @@ export default async function NavBar() {
             showAuthButtons && (
               <Link
                 href="/signup"
-                className="rounded-full bg-brand-600 px-3 py-1.5 text-white hover:bg-brand-700"
+                className="rounded-full bg-primary px-4 py-1.5 text-primary-foreground transition-colors hover:bg-primary/90"
               >
                 新規登録
               </Link>

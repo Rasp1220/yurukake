@@ -7,9 +7,9 @@ export default function BlogCard({ blog }: { blog: Blog }) {
   return (
     <Link
       href={`/blogs/${blog.id}`}
-      className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+      className="group flex h-full w-full flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white text-left shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
     >
-      <div className="relative aspect-video w-full overflow-hidden bg-stone-100">
+      <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
         {blog.thumbnailUrl && (
           <Image
             src={blog.thumbnailUrl}
@@ -21,8 +21,8 @@ export default function BlogCard({ blog }: { blog: Blog }) {
         )}
       </div>
       <div className="flex flex-1 flex-col gap-1 p-3">
-        <h3 className="line-clamp-2 text-sm font-semibold text-stone-800">{blog.title}</h3>
-        <p className="text-xs text-stone-500">
+        <h3 className="line-clamp-2 text-sm font-semibold text-slate-800">{blog.title}</h3>
+        <p className="text-xs text-slate-500">
           {new Date(blog.createdAt).toLocaleDateString("ja-JP")}
         </p>
       </div>

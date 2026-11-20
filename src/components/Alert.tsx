@@ -3,9 +3,9 @@ import { Icon } from "@iconify/react";
 type AlertVariant = "error" | "success" | "info";
 
 const VARIANT_CLASSES: Record<AlertVariant, string> = {
-  error: "border-red-200 bg-red-50 text-red-700",
-  success: "border-green-200 bg-green-50 text-green-700",
-  info: "border-orange-200 bg-orange-50 text-stone-700",
+  error: "border-red-300 bg-red-50 text-red-800",
+  success: "border-brand-300 bg-brand-50 text-brand-700",
+  info: "border-brand-200 bg-brand-50 text-slate-700",
 };
 
 const VARIANT_ICONS: Record<AlertVariant, string> = {
@@ -32,7 +32,7 @@ export default function Alert({
   return (
     <div
       role="alert"
-      className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-sm ${VARIANT_CLASSES[variant]} ${className}`}
+      className={`flex items-start gap-2 rounded-lg border px-3 py-2.5 text-sm ${VARIANT_CLASSES[variant]} ${className}`}
     >
       <Icon icon={VARIANT_ICONS[variant]} className="mt-0.5 h-4 w-4 flex-shrink-0" />
       <span className="min-w-0">{children}</span>
