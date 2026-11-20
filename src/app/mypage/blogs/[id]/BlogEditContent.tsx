@@ -27,7 +27,7 @@ import type { Blog, BlogBlock, BlogBlockType } from "@/lib/types";
 const RichTextEditor = dynamic(() => import("@/components/RichTextEditor"), {
   ssr: false,
   loading: () => (
-    <div className="flex h-80 items-center justify-center rounded-lg border border-stone-200 text-sm text-stone-400">
+    <div className="flex h-80 items-center justify-center rounded-lg border border-slate-200 text-sm text-slate-400">
       エディターを読み込み中...
     </div>
   ),
@@ -294,7 +294,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
   if (status === "not-found") {
     return (
       <div className="space-y-4 text-center">
-        <p className="text-stone-500">ブログが見つかりませんでした。</p>
+        <p className="text-slate-500">ブログが見つかりませんでした。</p>
         <Link href="/mypage/blogs" className="text-brand-600 hover:underline">
           ブログ一覧に戻る
         </Link>
@@ -307,20 +307,20 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
       <div>
         <Link
           href="/mypage/blogs"
-          className="inline-flex items-center gap-1 text-sm font-medium text-stone-500 hover:text-brand-600"
+          className="inline-flex items-center gap-1 text-sm font-medium text-slate-500 hover:text-brand-600"
         >
           ← ブログ一覧に戻る
         </Link>
-        <h1 className="text-2xl font-bold text-stone-800">{blog?.title}</h1>
+        <h1 className="text-2xl font-bold text-slate-800">{blog?.title}</h1>
       </div>
 
       {status === "error" && <Alert>{errorMessage}</Alert>}
 
       {blog && (
-        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+        <section className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
           <div>
-            <h2 className="font-semibold text-stone-800">公開設定</h2>
-            <p className="text-xs text-stone-500">
+            <h2 className="font-semibold text-slate-800">公開設定</h2>
+            <p className="text-xs text-slate-500">
               {blog.status === "published"
                 ? "公開中：ブロガープロフィールから誰でも閲覧できます"
                 : "下書き：自分だけが閲覧できます"}
@@ -342,7 +342,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
             disabled={savingStatus}
             className={
               blog.status === "published"
-                ? "rounded-full border border-stone-300 px-4 py-2 text-sm font-semibold text-stone-600 hover:bg-stone-50 disabled:opacity-60"
+                ? "rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-60"
                 : "rounded-full bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
             }
           >
@@ -351,15 +351,15 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
         </section>
       )}
 
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-semibold text-stone-800">タイトル</h2>
+      <section className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
+        <h2 className="mb-3 font-semibold text-slate-800">タイトル</h2>
         <form onSubmit={handleTitleSave} className="flex gap-2">
           <input
             type="text"
             value={title}
             onChange={(event) => setTitle(event.target.value)}
             maxLength={MAX_LENGTH.SHORT}
-            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="w-full rounded-full border border-brand-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
           <button
             type="submit"
@@ -371,13 +371,13 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
         </form>
       </section>
 
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-        <h2 className="mb-1 font-semibold text-stone-800">サムネイル</h2>
-        <p className="mb-3 text-xs text-stone-500">
+      <section className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
+        <h2 className="mb-1 font-semibold text-slate-800">サムネイル</h2>
+        <p className="mb-3 text-xs text-slate-500">
           一覧やSNSでの見え方を揃えるため、スマホ画面に近い比率（縦長なら1080×1920px、横長なら1920×1080px程度）での用意がおすすめです。アップロード時に自動でJPEG圧縮されます。
         </p>
         {blog?.thumbnailUrl && (
-          <div className="relative mb-3 h-64 w-full overflow-hidden rounded-xl bg-stone-100">
+          <div className="relative mb-3 h-64 w-full overflow-hidden rounded-xl bg-slate-100">
             <Image
               src={blog.thumbnailUrl}
               alt={blog.title}
@@ -388,7 +388,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
           </div>
         )}
         <div className="flex items-center gap-3">
-          <label className="cursor-pointer rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
+          <label className="cursor-pointer rounded-full border border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50">
             {thumbnailUploading
               ? "アップロード中..."
               : blog?.thumbnailUrl
@@ -406,7 +406,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
             <button
               type="button"
               onClick={handleThumbnailRemove}
-              className="text-xs text-stone-400 hover:text-red-500"
+              className="text-xs text-slate-400 hover:text-red-500"
             >
               削除
             </button>
@@ -414,23 +414,23 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
         </div>
       </section>
 
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-        <h2 className="mb-1 font-semibold text-stone-800">本文パーツ</h2>
-        <p className="mb-4 text-xs text-stone-500">
+      <section className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
+        <h2 className="mb-1 font-semibold text-slate-800">本文パーツ</h2>
+        <p className="mb-4 text-xs text-slate-500">
           テキスト・画像・複数画像・動画のパーツを好きな順番で組み合わせて本文を作れます。↑↓で並び替え、削除ボタンで取り除けます。
         </p>
 
         {blocks.length === 0 && (
-          <p className="rounded-xl border border-dashed border-orange-200 bg-orange-50 py-8 text-center text-sm text-stone-500">
+          <p className="rounded-xl border border-dashed border-brand-200 bg-brand-50 py-8 text-center text-sm text-slate-500">
             下のボタンからテキストや画像・動画のパーツを追加しましょう。
           </p>
         )}
 
-        <div className="flex flex-col divide-y divide-orange-100">
+        <div className="flex flex-col divide-y divide-brand-100">
           {blocks.map((block, index) => (
             <div key={block.id} className="py-4 first:pt-0 last:pb-0">
               <div className="mb-3 flex items-center justify-between">
-                <span className="inline-flex items-center gap-1 rounded-full bg-orange-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
+                <span className="inline-flex items-center gap-1 rounded-full bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700">
                   <Icon icon={BLOCK_ICONS[block.type]} className="h-3.5 w-3.5" />
                   {BLOCK_LABELS[block.type]}
                 </span>
@@ -439,7 +439,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                     type="button"
                     disabled={index === 0}
                     onClick={() => handleMove(index, -1)}
-                    className="rounded border border-stone-200 px-1.5 text-xs text-stone-500 hover:bg-stone-50 disabled:opacity-30"
+                    className="rounded border border-slate-200 px-1.5 text-xs text-slate-500 hover:bg-slate-50 disabled:opacity-30"
                   >
                     ↑
                   </button>
@@ -447,14 +447,14 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                     type="button"
                     disabled={index === blocks.length - 1}
                     onClick={() => handleMove(index, 1)}
-                    className="rounded border border-stone-200 px-1.5 text-xs text-stone-500 hover:bg-stone-50 disabled:opacity-30"
+                    className="rounded border border-slate-200 px-1.5 text-xs text-slate-500 hover:bg-slate-50 disabled:opacity-30"
                   >
                     ↓
                   </button>
                   <button
                     type="button"
                     onClick={() => handleRemoveBlock(block.id)}
-                    className="ml-2 text-xs text-stone-400 hover:text-red-500"
+                    className="ml-2 text-xs text-slate-400 hover:text-red-500"
                   >
                     削除
                   </button>
@@ -474,7 +474,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                     const overLimit = length > MAX_LENGTH.LONG;
                     return (
                       <div className="flex items-center justify-between">
-                        <p className={`text-xs ${overLimit ? "text-red-600" : "text-stone-400"}`}>
+                        <p className={`text-xs ${overLimit ? "text-red-600" : "text-slate-400"}`}>
                           {length}/{MAX_LENGTH.LONG}
                         </p>
                         <button
@@ -509,11 +509,11 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                       className="mx-auto block max-h-[520px] max-w-full rounded-xl"
                     />
                   ) : (
-                    <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
+                    <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
                       画像が未設定です
                     </p>
                   )}
-                  <label className="cursor-pointer self-start rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
+                  <label className="cursor-pointer self-start rounded-full border border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50">
                     {busyBlockId === block.id
                       ? "アップロード中..."
                       : block.content
@@ -552,7 +552,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                                 onClick={() => handleImageRemoveAt(block.id, index)}
                                 disabled={busyBlockId === block.id}
                                 aria-label="この画像を削除"
-                                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-stone-800/80 text-xs text-white hover:bg-red-500 disabled:opacity-60"
+                                className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-slate-800/80 text-xs text-white hover:bg-red-500 disabled:opacity-60"
                               >
                                 ×
                               </button>
@@ -560,13 +560,13 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                           ))}
                         </div>
                       ) : (
-                        <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
+                        <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
                           画像が未設定です
                         </p>
                       )}
                       <div className="flex flex-wrap items-center gap-2">
                         <label
-                          className={`cursor-pointer self-start rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50 ${
+                          className={`cursor-pointer self-start rounded-full border border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50 ${
                             atLimit ? "cursor-not-allowed opacity-60" : ""
                           }`}
                         >
@@ -580,7 +580,7 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                             onChange={(event) => handleImagesAdd(block.id, event)}
                           />
                         </label>
-                        <p className="text-xs text-stone-400">
+                        <p className="text-xs text-slate-400">
                           {urls.length}/{MAX_IMAGES_PER_BLOCK}枚（表示時はスライダーで横スクロールできます）
                         </p>
                       </div>
@@ -593,14 +593,14 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
                   {block.content ? (
                     <video src={block.content} controls className="w-full rounded-xl bg-black" />
                   ) : (
-                    <p className="rounded-xl border border-dashed border-stone-200 py-8 text-center text-sm text-stone-400">
+                    <p className="rounded-xl border border-dashed border-slate-200 py-8 text-center text-sm text-slate-400">
                       動画が未設定です
                     </p>
                   )}
-                  <p className="text-xs text-stone-400">
+                  <p className="text-xs text-slate-400">
                     動画は容量が大きいと読み込みに時間がかかります。100MBを超えるファイルはアップロードできません。長い動画はYouTubeにアップロードし、動画パーツの代わりにテキストパーツへリンクを貼ることもご検討ください。
                   </p>
-                  <label className="cursor-pointer self-start rounded-full border border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50">
+                  <label className="cursor-pointer self-start rounded-full border border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50">
                     {busyBlockId === block.id
                       ? "アップロード中..."
                       : block.content
@@ -620,32 +620,32 @@ export default function BlogEditContent({ blogId }: { blogId: string }) {
           ))}
         </div>
 
-        <div className="mt-4 flex flex-wrap gap-2 border-t border-orange-100 pt-4">
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-brand-100 pt-4">
           <button
             type="button"
             onClick={() => handleAddBlock("text")}
-            className="rounded-full border border-dashed border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50"
+            className="rounded-full border border-dashed border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50"
           >
             + テキストを追加
           </button>
           <button
             type="button"
             onClick={() => handleAddBlock("image")}
-            className="rounded-full border border-dashed border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50"
+            className="rounded-full border border-dashed border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50"
           >
             + 画像を追加
           </button>
           <button
             type="button"
             onClick={() => handleAddBlock("images")}
-            className="rounded-full border border-dashed border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50"
+            className="rounded-full border border-dashed border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50"
           >
             + 複数画像を追加
           </button>
           <button
             type="button"
             onClick={() => handleAddBlock("video")}
-            className="rounded-full border border-dashed border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50"
+            className="rounded-full border border-dashed border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50"
           >
             + 動画を追加
           </button>

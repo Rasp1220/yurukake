@@ -5,6 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import Alert from "@/components/Alert";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export default function SignupForm() {
   const router = useRouter();
@@ -55,8 +58,8 @@ export default function SignupForm() {
   if (status === "confirmEmail") {
     return (
       <div className="mx-auto max-w-sm text-center">
-        <h1 className="text-2xl font-bold text-stone-800">確認メールを送信しました</h1>
-        <p className="mt-3 text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-slate-800">確認メールを送信しました</h1>
+        <p className="mt-3 text-sm text-slate-500">
           {email} 宛に確認メールを送信しました。メール内のリンクをクリックして登録を完了してください。
         </p>
       </div>
@@ -66,67 +69,64 @@ export default function SignupForm() {
   return (
     <div className="mx-auto flex max-w-sm flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">新規登録</h1>
-        <p className="mt-1 text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-slate-800">新規登録</h1>
+        <p className="mt-1 text-sm text-slate-500">
           アカウントを作成してお出かけスポットを登録しましょう。
         </p>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-3">
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-700">
+          <Label>
             メールアドレス
-          </label>
-          <input
+          </Label>
+          <Input
             type="email"
             required
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             maxLength={255}
-            className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-700">
+          <Label>
             パスワード
-          </label>
-          <input
+          </Label>
+          <Input
             type="password"
             required
             minLength={6}
             maxLength={128}
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm font-medium text-stone-700">
+          <Label>
             パスワード（確認）
-          </label>
-          <input
+          </Label>
+          <Input
             type="password"
             required
             minLength={6}
             maxLength={128}
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
-            className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
         </div>
 
         {status === "error" && <Alert>{errorMessage}</Alert>}
 
-        <button
+        <Button
           type="submit"
           disabled={status === "loading"}
-          className="mt-2 rounded-full bg-brand-600 px-5 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
+          className="mt-2 w-full"
         >
           {status === "loading" ? "登録中..." : "アカウントを作成"}
-        </button>
+        </Button>
       </form>
 
-      <p className="text-center text-sm text-stone-500">
+      <p className="text-center text-sm text-slate-500">
         すでにアカウントをお持ちの方は{" "}
         <Link href="/login" className="font-medium text-brand-600 hover:underline">
           ログイン

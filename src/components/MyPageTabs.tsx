@@ -31,7 +31,7 @@ export default function MyPageTabs() {
             className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${
               active
                 ? "border-brand-600 bg-brand-600 text-white"
-                : "border-orange-200 text-stone-600 hover:border-brand-300"
+                : "border-brand-200 text-slate-600 hover:border-brand-300"
             }`}
           >
             {tab.label}

@@ -129,7 +129,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
   if (status === "not-found") {
     return (
       <div className="space-y-4 text-center">
-        <p className="text-stone-500">プランが見つかりませんでした。</p>
+        <p className="text-slate-500">プランが見つかりませんでした。</p>
         <Link href="/mypage/plans" className="text-brand-600 hover:underline">
           プラン一覧に戻る
         </Link>
@@ -161,10 +161,10 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-2">
         <div>
-          <Link href="/mypage/plans" className="text-xs text-stone-400 hover:text-brand-600">
+          <Link href="/mypage/plans" className="text-xs text-slate-400 hover:text-brand-600">
             ← プラン一覧
           </Link>
-          <h1 className="text-2xl font-bold text-stone-800">{plan?.title}</h1>
+          <h1 className="text-2xl font-bold text-slate-800">{plan?.title}</h1>
         </div>
         {plan && origin && <ShareButtons text={shareText} url={origin} />}
       </div>
@@ -173,10 +173,10 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
 
       <div className="flex flex-col gap-4">
         {Array.from({ length: dayCount }, (_, index) => index + 1).map((day) => (
-          <div key={day} className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-            <h2 className="mb-3 font-semibold text-stone-800">{day}日目</h2>
+          <div key={day} className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
+            <h2 className="mb-3 font-semibold text-slate-800">{day}日目</h2>
             {(itemsByDay.get(day) ?? []).length === 0 ? (
-              <p className="text-sm text-stone-400">まだスポットが登録されていません。</p>
+              <p className="text-sm text-slate-400">まだスポットが登録されていません。</p>
             ) : (
               <ul className="flex flex-col gap-2">
                 {(itemsByDay.get(day) ?? []).map((item, index, dayItems) => {
@@ -185,9 +185,9 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                   return (
                     <li
                       key={item.id}
-                      className="flex items-center gap-3 rounded-xl border border-stone-100 p-2"
+                      className="flex items-center gap-3 rounded-xl border border-slate-100 p-2"
                     >
-                      <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
+                      <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
                         <Image
                           src={spot.thumbnailUrl}
                           alt={spotDisplayName(spot)}
@@ -197,7 +197,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                         />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-stone-800">
+                        <p className="truncate text-sm font-medium text-slate-800">
                           {spotDisplayName(spot)}
                         </p>
                         <div className="flex flex-wrap gap-2 text-xs">
@@ -225,7 +225,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                             type="button"
                             disabled={index === 0}
                             onClick={() => handleReorder(day, index, -1)}
-                            className="rounded border border-stone-200 px-1.5 text-xs text-stone-500 hover:bg-stone-50 disabled:opacity-30"
+                            className="rounded border border-slate-200 px-1.5 text-xs text-slate-500 hover:bg-slate-50 disabled:opacity-30"
                           >
                             ↑
                           </button>
@@ -233,7 +233,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                             type="button"
                             disabled={index === dayItems.length - 1}
                             onClick={() => handleReorder(day, index, 1)}
-                            className="rounded border border-stone-200 px-1.5 text-xs text-stone-500 hover:bg-stone-50 disabled:opacity-30"
+                            className="rounded border border-slate-200 px-1.5 text-xs text-slate-500 hover:bg-slate-50 disabled:opacity-30"
                           >
                             ↓
                           </button>
@@ -242,7 +242,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                           <select
                             value={item.dayNumber}
                             onChange={(event) => handleMoveDay(item.id, Number(event.target.value))}
-                            className="rounded border border-stone-200 text-xs"
+                            className="rounded border border-slate-200 text-xs"
                           >
                             {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
                               <option key={d} value={d}>
@@ -253,7 +253,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                           <button
                             type="button"
                             onClick={() => handleRemove(item.id)}
-                            className="text-xs text-stone-400 hover:text-red-500"
+                            className="text-xs text-slate-400 hover:text-red-500"
                           >
                             削除
                           </button>
@@ -269,23 +269,23 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
         <button
           type="button"
           onClick={() => setDayCount((count) => count + 1)}
-          className="self-start rounded-full border border-dashed border-orange-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-orange-50"
+          className="self-start rounded-full border border-dashed border-brand-300 px-4 py-2 text-sm font-medium text-brand-600 hover:bg-brand-50"
         >
           + 日を追加
         </button>
       </div>
 
-      <div className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
-        <h2 className="mb-3 font-semibold text-stone-800">行きたいリストから追加</h2>
+      <div className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
+        <h2 className="mb-3 font-semibold text-slate-800">行きたいリストから追加</h2>
         {unassignedSpots.length === 0 ? (
-          <p className="text-sm text-stone-400">
+          <p className="text-sm text-slate-400">
             追加できるスポットがありません。検索画面から行きたいリストに追加してください。
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
             {unassignedSpots.map((spot) => (
-              <li key={spot.id} className="flex items-center gap-3 rounded-xl border border-stone-100 p-2">
-                <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100">
+              <li key={spot.id} className="flex items-center gap-3 rounded-xl border border-slate-100 p-2">
+                <div className="relative h-12 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100">
                   <Image
                     src={spot.thumbnailUrl}
                     alt={spotDisplayName(spot)}
@@ -294,7 +294,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                     className="object-cover"
                   />
                 </div>
-                <p className="min-w-0 flex-1 truncate text-sm text-stone-800">
+                <p className="min-w-0 flex-1 truncate text-sm text-slate-800">
                   {spotDisplayName(spot)}
                 </p>
                 <select
@@ -302,7 +302,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
                   onChange={(event) =>
                     setAddDay((current) => ({ ...current, [spot.id]: Number(event.target.value) }))
                   }
-                  className="rounded border border-stone-200 text-xs"
+                  className="rounded border border-slate-200 text-xs"
                 >
                   {Array.from({ length: dayCount }, (_, i) => i + 1).map((d) => (
                     <option key={d} value={d}>

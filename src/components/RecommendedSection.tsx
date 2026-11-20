@@ -42,9 +42,9 @@ export default function RecommendedSection() {
 
   return (
     <section className="space-y-3">
-      <h2 className="text-lg font-bold text-stone-800">{label}</h2>
+      <h2 className="text-xl text-foreground">{label}</h2>
 
-      {status === "loading" && <p className="py-6 text-sm text-stone-400">読み込み中...</p>}
+      {status === "loading" && <p className="py-6 text-sm text-slate-400">読み込み中...</p>}
 
       {status === "idle" && (
         <div className="-mx-4 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-px-4 px-4 pb-2">

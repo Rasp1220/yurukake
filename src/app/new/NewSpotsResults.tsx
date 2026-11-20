@@ -12,7 +12,7 @@ export default function NewSpotsResults({ items }: { items: RecentSpotItem[] }) 
   const [savedMessage, setSavedMessage] = useState(false);
 
   if (items.length === 0) {
-    return <p className="py-12 text-center text-stone-400">まだ表示できるスポットがありません。</p>;
+    return <p className="py-12 text-center text-slate-400">まだ表示できるスポットがありません。</p>;
   }
 
   return (

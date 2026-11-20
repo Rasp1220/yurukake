@@ -4,7 +4,7 @@ export const metadata = {
 
 export default function PrivacyPage() {
   return (
-    <article className="mx-auto max-w-3xl space-y-8 text-stone-700">
+    <article className="mx-auto max-w-3xl space-y-8 text-slate-700">
       <h1 className="text-2xl font-bold text-brand-600">
         プライバシーポリシー
       </h1>
@@ -13,7 +13,7 @@ export default function PrivacyPage() {
       </p>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           1. 取得する情報
         </h2>
         <p>
@@ -22,7 +22,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           2. 利用目的
         </h2>
         <p>
@@ -31,7 +31,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           3. 第三者提供
         </h2>
         <p>
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           4. 外部サービスの利用
         </h2>
         <p>
@@ -50,7 +50,7 @@ export default function PrivacyPage() {
       </section>
 
       <section className="space-y-2">
-        <h2 className="text-lg font-semibold text-stone-900">
+        <h2 className="text-lg font-semibold text-slate-900">
           5. 本ポリシーの変更
         </h2>
         <p>
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
         </p>
       </section>
 
-      <p className="text-sm text-stone-400">制定日：2026年8月12日</p>
+      <p className="text-sm text-slate-400">制定日：2026年8月12日</p>
     </article>
   );
 }

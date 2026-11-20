@@ -43,7 +43,7 @@ export default function VideoSlider({
   return (
     <section className="space-y-3">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-bold text-stone-800">{areaLabel}のおすすめスポット</h2>
+        <h2 className="text-xl text-foreground">{areaLabel}のおすすめスポット</h2>
         <Link
           href={`/search?q=${encodeURIComponent(query)}`}
           className="text-sm font-medium text-brand-600 hover:underline"
@@ -59,7 +59,7 @@ export default function VideoSlider({
       )}
 
       {status === "loading" && (
-        <p className="py-6 text-sm text-stone-400">読み込み中...</p>
+        <p className="py-6 text-sm text-slate-400">読み込み中...</p>
       )}
 
       {status === "error" && <Alert>{errorMessage}</Alert>}

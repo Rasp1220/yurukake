@@ -17,17 +17,17 @@ export default async function BloggerBlogsPage({
       <div>
         <Link
           href={`/blogger/${params.userId}`}
-          className="text-xs text-stone-400 hover:text-brand-600"
+          className="text-xs text-slate-400 hover:text-brand-600"
         >
           ← {profile.displayName || "ブロガー"}さんのプロフィール
         </Link>
-        <h1 className="text-2xl font-bold text-stone-800">
+        <h1 className="text-2xl font-bold text-slate-800">
           {profile.displayName || "ブロガー"}さんのブログ一覧
         </h1>
       </div>
 
       {blogs.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-orange-200 bg-orange-50 py-12 text-center text-stone-500">
+        <p className="rounded-2xl border border-dashed border-brand-200 bg-brand-50 py-12 text-center text-slate-500">
           まだ公開されているブログがありません。
         </p>
       ) : (

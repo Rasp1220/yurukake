@@ -62,7 +62,7 @@ export default function SaveModal({
           type="button"
           onClick={onClose}
           aria-label="閉じる"
-          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow-sm hover:bg-stone-100 hover:text-stone-700"
+          className="absolute right-3 top-3 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/90 text-slate-500 shadow-sm hover:bg-slate-100 hover:text-slate-700"
         >
           <Icon icon="mdi:close" className="h-5 w-5" />
         </button>
@@ -75,11 +75,11 @@ export default function SaveModal({
             allowFullScreen
           />
         </div>
-        <h2 className="mb-1 text-base font-semibold text-stone-800">{video.title}</h2>
-        <p className="mb-4 text-sm text-stone-500">{video.channelTitle}</p>
+        <h2 className="mb-1 text-base font-semibold text-slate-800">{video.title}</h2>
+        <p className="mb-4 text-sm text-slate-500">{video.channelTitle}</p>
 
         {isLoggedIn === false ? (
-          <div className="rounded-xl bg-orange-50 p-4 text-center text-sm text-stone-600">
+          <div className="rounded-xl bg-brand-50 p-4 text-center text-sm text-slate-600">
             <p className="mb-3">行きたいリストに追加するにはログインが必要です。</p>
             <Link
               href="/login"
@@ -91,7 +91,7 @@ export default function SaveModal({
         ) : (
         <form onSubmit={handleSave} className="space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">
+            <label className="mb-1 block text-sm font-medium text-slate-700">
               スポット名（任意）
             </label>
             <input
@@ -100,11 +100,11 @@ export default function SaveModal({
               onChange={(event) => setSpotName(event.target.value)}
               placeholder="未入力の場合は動画タイトルを使用します"
               maxLength={MAX_LENGTH.SHORT}
-              className="w-full rounded-lg border border-stone-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-stone-700">
+            <label className="mb-1 block text-sm font-medium text-slate-700">
               ジャンル（任意）
             </label>
             <div className="flex flex-wrap gap-2">
@@ -116,7 +116,7 @@ export default function SaveModal({
                   className={`rounded-full border px-3 py-1 text-xs font-medium transition ${
                     genre === option
                       ? "border-brand-600 bg-brand-600 text-white"
-                      : "border-stone-200 text-stone-600 hover:border-brand-300"
+                      : "border-slate-200 text-slate-600 hover:border-brand-300"
                   }`}
                 >
                   {option}
@@ -131,7 +131,7 @@ export default function SaveModal({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full px-4 py-2 text-sm font-medium text-stone-500 hover:bg-stone-100"
+              className="rounded-full px-4 py-2 text-sm font-medium text-slate-500 hover:bg-slate-100"
             >
               キャンセル
             </button>

@@ -55,8 +55,8 @@ export default function SavedSpotsList() {
   return (
     <div className="flex flex-col gap-3">
       <div>
-        <h2 className="text-lg font-bold text-stone-800">行きたいリスト</h2>
-        <p className="text-sm text-stone-500">
+        <h2 className="text-lg font-bold text-slate-800">行きたいリスト</h2>
+        <p className="text-sm text-slate-500">
           検索画面から保存したスポットです。プランに組み込んで、当日のしおりとして使えます。
         </p>
       </div>
@@ -64,7 +64,7 @@ export default function SavedSpotsList() {
       {status === "error" && <Alert>{errorMessage}</Alert>}
 
       {spots.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-orange-200 bg-orange-50 py-12 text-center text-stone-500">
+        <p className="rounded-2xl border border-dashed border-brand-200 bg-brand-50 py-12 text-center text-slate-500">
           まだ行きたいスポットが保存されていません。検索画面から追加してみましょう。
         </p>
       ) : (
@@ -74,9 +74,9 @@ export default function SavedSpotsList() {
             {spots.map((spot, index) => (
               <div
                 key={spot.id}
-                className="flex items-center gap-4 rounded-2xl border border-orange-100 bg-white p-3 shadow-sm"
+                className="flex items-center gap-4 rounded-2xl border border-brand-100 bg-white p-3 shadow-sm"
               >
-                <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-stone-100 sm:h-28 sm:w-44">
+                <div className="relative h-16 w-24 flex-shrink-0 overflow-hidden rounded-lg bg-slate-100 sm:h-28 sm:w-44">
                   <Image
                     src={spot.thumbnailUrl}
                     alt={spot.videoTitle}
@@ -91,7 +91,7 @@ export default function SavedSpotsList() {
                       <p className="text-sm font-semibold text-brand-600">
                         #{index + 1} {spotDisplayName(spot)}
                         {spot.genre && (
-                          <span className="ml-2 rounded-full bg-orange-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
+                          <span className="ml-2 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
                             {spot.genre}
                           </span>
                         )}
@@ -99,14 +99,14 @@ export default function SavedSpotsList() {
                       {/* 住所の入力欄は廃止したため、以前に住所を入れて保存した
                           スポットだけこの行が出る（新規保存では常に空になる）。 */}
                       {spot.address && (
-                        <p className="line-clamp-1 text-xs text-stone-500">{spot.address}</p>
+                        <p className="line-clamp-1 text-xs text-slate-500">{spot.address}</p>
                       )}
                     </div>
                     <button
                       onClick={() => handleRemove(spot.id)}
                       aria-label="リストから削除"
                       title="リストから削除"
-                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-stone-400 transition hover:bg-red-50 hover:text-red-500"
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-slate-400 transition hover:bg-red-50 hover:text-red-500"
                     >
                       <Icon icon="mdi:trash-can-outline" className="h-4 w-4" />
                     </button>
@@ -118,7 +118,7 @@ export default function SavedSpotsList() {
                       rel="noopener noreferrer"
                       aria-label="Google Mapで開く"
                       title="Google Mapで開く"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-brand-600 transition hover:bg-orange-100"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 transition hover:bg-brand-100"
                     >
                       <Icon icon="mdi:google-maps" className="h-5 w-5" />
                     </a>
@@ -128,7 +128,7 @@ export default function SavedSpotsList() {
                       rel="noopener noreferrer"
                       aria-label="YouTubeで見る"
                       title="YouTubeで見る"
-                      className="flex h-10 w-10 items-center justify-center rounded-full bg-orange-50 text-brand-600 transition hover:bg-orange-100"
+                      className="flex h-10 w-10 items-center justify-center rounded-full bg-brand-50 text-brand-600 transition hover:bg-brand-100"
                     >
                       <Icon icon="mdi:youtube" className="h-5 w-5" />
                     </a>
