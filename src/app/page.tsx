@@ -38,7 +38,7 @@ export default function HomePage() {
           width={1717}
           height={582}
           priority
-          className="mx-auto w-full max-w-xs md:max-w-sm"
+          className="order-first mx-auto w-full max-w-[16rem] md:order-none md:max-w-sm"
         />
       </section>
 
