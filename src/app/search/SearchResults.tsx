@@ -133,8 +133,8 @@ export default function SearchResults({ query }: { query: string }) {
               onClick={() => setTypeFilter(option.value)}
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                 typeFilter === option.value
-                  ? "border-stone-700 bg-stone-700 text-white"
-                  : "border-stone-300 text-stone-600 hover:border-stone-500"
+                  ? "border-slate-700 bg-slate-700 text-white"
+                  : "border-slate-300 text-slate-600 hover:border-slate-500"
               }`}
             >
               {option.label}
@@ -153,7 +153,7 @@ export default function SearchResults({ query }: { query: string }) {
               className={`rounded-full border px-3 py-1.5 text-sm font-medium transition ${
                 genre === option
                   ? "border-brand-600 bg-brand-600 text-white"
-                  : "border-orange-200 text-stone-600 hover:border-brand-300"
+                  : "border-brand-200 text-slate-600 hover:border-brand-300"
               }`}
             >
               {option}
@@ -169,13 +169,13 @@ export default function SearchResults({ query }: { query: string }) {
       )}
 
       {!query && (
-        <p className="py-12 text-center text-stone-400">
+        <p className="py-12 text-center text-slate-400">
           エリアやジャンルを入力して検索してください。
         </p>
       )}
 
       {query && loading && (
-        <p className="py-12 text-center text-stone-400">検索中...</p>
+        <p className="py-12 text-center text-slate-400">検索中...</p>
       )}
 
       {query && status === "error" && <Alert>{errorMessage}</Alert>}
@@ -183,7 +183,7 @@ export default function SearchResults({ query }: { query: string }) {
       {query && page === 1 && blogStatus === "error" && <Alert>{blogErrorMessage}</Alert>}
 
       {nothingFound && (
-        <p className="py-12 text-center text-stone-400">
+        <p className="py-12 text-center text-slate-400">
           「{query}」に一致する動画・ブログが見つかりませんでした。
         </p>
       )}

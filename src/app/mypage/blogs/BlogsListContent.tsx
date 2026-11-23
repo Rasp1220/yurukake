@@ -62,8 +62,8 @@ export default function BlogsListContent() {
       <MyPageTabs />
 
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">お出かけブログ</h1>
-        <p className="text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-slate-800">お出かけブログ</h1>
+        <p className="text-sm text-slate-500">
           タイトル・サムネイルを付けて、テキストや画像・動画のパーツを自由に組み合わせたブログを作れます。
         </p>
       </div>
@@ -71,7 +71,7 @@ export default function BlogsListContent() {
       {status === "error" && <Alert>{errorMessage}</Alert>}
 
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-bold text-stone-800">ブログ一覧</h2>
+        <h2 className="text-lg font-bold text-slate-800">ブログ一覧</h2>
         <button
           type="button"
           onClick={handleCreate}
@@ -83,7 +83,7 @@ export default function BlogsListContent() {
       </div>
 
       {blogs.length === 0 ? (
-        <p className="rounded-2xl border border-dashed border-orange-200 bg-orange-50 py-12 text-center text-stone-500">
+        <p className="rounded-2xl border border-dashed border-brand-200 bg-brand-50 py-12 text-center text-slate-500">
           まだブログがありません。上のボタンから作成してみましょう。
         </p>
       ) : (
@@ -92,10 +92,10 @@ export default function BlogsListContent() {
           {blogs.map((blog) => (
             <div
               key={blog.id}
-              className="group flex flex-col overflow-hidden rounded-2xl border border-orange-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              className="group flex flex-col overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
             >
               <Link href={`/mypage/blogs/${blog.id}`} className="block">
-                <div className="relative aspect-video w-full overflow-hidden bg-stone-100">
+                <div className="relative aspect-video w-full overflow-hidden bg-slate-100">
                   {blog.thumbnailUrl && (
                     <Image
                       src={blog.thumbnailUrl}
@@ -109,25 +109,25 @@ export default function BlogsListContent() {
                     className={
                       blog.status === "published"
                         ? "absolute right-2 top-2 rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700"
-                        : "absolute right-2 top-2 rounded-full bg-stone-100 px-2 py-0.5 text-[10px] font-medium text-stone-500"
+                        : "absolute right-2 top-2 rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500"
                     }
                   >
                     {blog.status === "published" ? "公開中" : "下書き"}
                   </span>
                 </div>
                 <div className="flex flex-col gap-1 p-3">
-                  <p className="line-clamp-2 text-sm font-semibold text-stone-800">
+                  <p className="line-clamp-2 text-sm font-semibold text-slate-800">
                     {blog.title}
                   </p>
-                  <p className="text-xs text-stone-400">
+                  <p className="text-xs text-slate-400">
                     {new Date(blog.createdAt).toLocaleDateString("ja-JP")} 作成
                   </p>
                 </div>
               </Link>
-              <div className="flex justify-end border-t border-orange-50 px-3 py-2">
+              <div className="flex justify-end border-t border-brand-50 px-3 py-2">
                 <button
                   onClick={() => handleDelete(blog.id)}
-                  className="text-xs text-stone-400 hover:text-red-500"
+                  className="text-xs text-slate-400 hover:text-red-500"
                 >
                   削除
                 </button>

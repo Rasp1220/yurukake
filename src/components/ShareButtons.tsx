@@ -9,12 +9,12 @@ export default function ShareButtons({ text, url }: { text: string; url: string 
 
   return (
     <div className="flex items-center gap-2">
-      <span className="text-xs font-medium text-stone-500">シェア:</span>
+      <span className="text-xs font-medium text-slate-500">シェア:</span>
       <a
         href={xUrl}
         target="_blank"
         rel="noopener noreferrer"
-        className="rounded-full border border-stone-200 px-3 py-1.5 text-xs font-semibold text-stone-700 hover:bg-stone-50"
+        className="rounded-full border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
       >
         X
       </a>

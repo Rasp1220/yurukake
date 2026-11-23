@@ -18,11 +18,11 @@ export default async function PublicBlogPage({ params }: { params: { id: string 
       <div>
         <Link
           href={`/blogger/${blog.userId}`}
-          className="text-xs text-stone-400 hover:text-brand-600"
+          className="text-xs text-slate-400 hover:text-brand-600"
         >
           ← {profile.displayName || "ブロガー"}さんのブログ一覧
         </Link>
-        <h1 className="text-2xl font-bold text-stone-800">{blog.title}</h1>
+        <h1 className="text-2xl font-bold text-slate-800">{blog.title}</h1>
       </div>
 
       <div className="flex flex-col gap-6">
@@ -30,7 +30,7 @@ export default async function PublicBlogPage({ params }: { params: { id: string 
           <div key={block.id}>
             {block.type === "text" && block.content && (
               <div
-                className="text-sm leading-relaxed text-stone-700 [&_a]:text-brand-600 [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
+                className="text-sm leading-relaxed text-slate-700 [&_a]:text-brand-600 [&_a]:underline [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:mb-3 [&_strong]:font-semibold [&_ul]:list-disc [&_ul]:pl-5"
                 dangerouslySetInnerHTML={{ __html: sanitizeBlogContent(block.content) }}
               />
             )}

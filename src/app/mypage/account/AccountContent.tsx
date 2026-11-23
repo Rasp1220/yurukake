@@ -86,20 +86,20 @@ export default function AccountContent() {
       <MyPageTabs />
 
       <div>
-        <h1 className="text-2xl font-bold text-stone-800">アカウント情報</h1>
-        <p className="text-sm text-stone-500">
+        <h1 className="text-2xl font-bold text-slate-800">アカウント情報</h1>
+        <p className="text-sm text-slate-500">
           ログインに使うメールアドレスとパスワードを変更できます（公開プロフィールには表示されません）。
         </p>
       </div>
 
       {status === "error" && <Alert>{errorMessage}</Alert>}
 
-      <section className="rounded-2xl border border-orange-100 bg-white p-4 shadow-sm">
+      <section className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
         <form
           onSubmit={handleEmailSave}
-          className="mb-4 flex flex-col gap-2 border-b border-stone-100 pb-4"
+          className="mb-4 flex flex-col gap-2 border-b border-slate-100 pb-4"
         >
-          <label className="text-xs font-medium text-stone-600">メールアドレス</label>
+          <label className="text-xs font-medium text-slate-600">メールアドレス</label>
           <div className="flex gap-2">
             <input
               type="email"
@@ -107,7 +107,7 @@ export default function AccountContent() {
               value={newEmail}
               onChange={(event) => setNewEmail(event.target.value)}
               maxLength={255}
-              className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+              className="w-full rounded-full border border-brand-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
             />
             <button
               type="submit"
@@ -128,7 +128,7 @@ export default function AccountContent() {
         </form>
 
         <form onSubmit={handlePasswordSave} className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-stone-600">新しいパスワード</label>
+          <label className="text-xs font-medium text-slate-600">新しいパスワード</label>
           <input
             type="password"
             required
@@ -137,7 +137,7 @@ export default function AccountContent() {
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
             placeholder="6文字以上"
-            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="w-full rounded-full border border-brand-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
           <input
             type="password"
@@ -147,7 +147,7 @@ export default function AccountContent() {
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             placeholder="新しいパスワード（確認）"
-            className="w-full rounded-full border border-orange-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+            className="w-full rounded-full border border-brand-200 bg-white px-4 py-2 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
           />
           <button
             type="submit"

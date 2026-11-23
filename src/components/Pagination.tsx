@@ -17,18 +17,18 @@ export default function Pagination({
         type="button"
         onClick={() => onChange(page - 1)}
         disabled={page <= 1}
-        className="rounded-full border border-orange-200 px-4 py-2 text-sm font-medium text-stone-600 transition hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-full border border-brand-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-40"
       >
         前へ
       </button>
-      <span className="text-sm text-stone-500">
+      <span className="text-sm text-slate-500">
         {page} / {totalPages} ページ
       </span>
       <button
         type="button"
         onClick={() => onChange(page + 1)}
         disabled={page >= totalPages}
-        className="rounded-full border border-orange-200 px-4 py-2 text-sm font-medium text-stone-600 transition hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-40"
+        className="rounded-full border border-brand-200 px-4 py-2 text-sm font-medium text-slate-600 transition hover:border-brand-300 disabled:cursor-not-allowed disabled:opacity-40"
       >
         次へ
       </button>

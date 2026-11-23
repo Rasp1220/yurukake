@@ -4,8 +4,8 @@ export default function Footer() {
   const year = new Date().getFullYear();
 
   return (
-    <footer className="border-t border-orange-100 bg-white">
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-4 py-6 text-sm text-stone-600">
+    <footer className="border-t bg-card">
+      <div className="mx-auto flex max-w-7xl flex-col items-center gap-4 px-4 py-6 text-sm text-slate-600">
         <div className="flex flex-wrap items-center justify-center gap-2">
           <a
             href="https://himatsudo.com"
@@ -33,7 +33,7 @@ export default function Footer() {
               プライバシーポリシー
             </Link>
           </nav>
-          <p className="text-stone-400">&copy; {year} ゆるかけ</p>
+          <p className="text-slate-400">&copy; {year} ゆるかけ</p>
         </div>
       </div>
     </footer>
