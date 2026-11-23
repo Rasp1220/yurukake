@@ -60,6 +60,23 @@ function toVideoResult(row: AreaVideoRow): VideoResult {
 
 export type AreaVideoSort = "random" | "view_count" | "published_at";
 
+/** 動画IDで保存済みの動画を1件引く（動画URLでの検索用）。無ければ空配列。 */
+export async function findAreaVideoById(videoId: string): Promise<VideoResult[]> {
+  const supabase = getAreaVideosClient();
+  if (!supabase) {
+    throw new Error("サーバーにSupabaseの接続情報が設定されていません");
+  }
+
+  const { data, error } = await supabase
+    .from(TABLE)
+    .select("video_id, title, channel_title, thumbnail_url, description, published_at, view_count")
+    .eq("video_id", videoId)
+    .limit(1);
+  if (error) throw new Error(error.message);
+
+  return ((data ?? []) as AreaVideoRow[]).map(toVideoResult);
+}
+
 /**
  * 都道府県名、または主要都市・エリア名（「札幌」「名古屋」など。
  * `resolve_prefecture_query`／`supabase/schema.sql`）に一致すればその

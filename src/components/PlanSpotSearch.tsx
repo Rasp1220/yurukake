@@ -73,7 +73,7 @@ export default function PlanSpotSearch({
             type="text"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder="例：浅草 カフェ"
+            placeholder="例：浅草 カフェ／動画のURL"
             maxLength={MAX_LENGTH.SHORT}
             aria-label="スポットを検索"
             className="w-full rounded-full border border-brand-200 bg-white py-2 pl-9 pr-4 text-sm outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
