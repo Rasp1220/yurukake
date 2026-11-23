@@ -55,8 +55,9 @@ export default function PlanSpotSearch({
   }
 
   function isAdded(videoId: string) {
-    const saved = spots.find((spot) => spot.videoId === videoId);
-    return Boolean(saved && assignedSpotIds.has(saved.id));
+    // 同じ動画を行きたいリストに複数保存している場合もあるため、どれか1つでも
+    // プランに入っていれば追加済みとみなす。
+    return spots.some((spot) => spot.videoId === videoId && assignedSpotIds.has(spot.id));
   }
 
   return (

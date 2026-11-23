@@ -308,7 +308,7 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
         <h2 className="mb-3 font-semibold text-slate-800">行きたいリストから追加</h2>
         {unassignedSpots.length === 0 ? (
           <p className="text-sm text-slate-400">
-            行きたいリストに追加できるスポットがありません。
+            行きたいリストから追加できるスポットがありません。
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
