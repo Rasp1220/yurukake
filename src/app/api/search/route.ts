@@ -43,8 +43,10 @@ export async function GET(request: NextRequest) {
   const videoId = extractVideoId(query);
   if (videoId) {
     try {
-      const results = await findAreaVideoById(videoId);
-      return NextResponse.json({ results, total: results.length });
+      const found = await findAreaVideoById(videoId);
+      // 該当は最大1件なので、2ページ目以降（もっと見るページ）は空を返す。
+      const results = offset > 0 ? [] : found;
+      return NextResponse.json({ results, total: found.length });
     } catch (error) {
       const message = error instanceof Error ? error.message : "検索に失敗しました";
       return NextResponse.json({ error: message }, { status: 502 });
