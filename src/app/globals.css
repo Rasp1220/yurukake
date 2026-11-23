@@ -27,6 +27,9 @@ body {
     --ring: 150 33% 34%;
     --radius: 0.75rem;
   }
+  * {
+    @apply border-border;
+  }
   body {
     @apply bg-background font-sans text-foreground antialiased;
   }
