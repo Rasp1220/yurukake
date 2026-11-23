@@ -1,5 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { countAreaVideos, searchAreaVideos, type AreaVideoSort } from "@/lib/areaVideos";
+import {
+  countAreaVideos,
+  findAreaVideoById,
+  searchAreaVideos,
+  type AreaVideoSort,
+} from "@/lib/areaVideos";
+import { extractVideoId } from "@/lib/videoUrl";
 
 // サイト側はYouTube APIを直接呼ばず、事前にバッチ
 // （`/api/cron/fetch-area-videos`）が貯めた `area_videos` テーブルから
@@ -32,6 +38,20 @@ export async function GET(request: NextRequest) {
   // エリア枠・おすすめ枠まで数えると、1回の表示でテーブル全体を走査する
   // count クエリが枠の数だけ走ってしまうため、明示的に要求されたときだけ数える。
   const withTotal = request.nextUrl.searchParams.get("withTotal") === "true";
+
+  // 動画URLが貼られた場合は、キーワード検索ではなく動画IDで引く。
+  const videoId = extractVideoId(query);
+  if (videoId) {
+    try {
+      const found = await findAreaVideoById(videoId);
+      // 該当は最大1件なので、2ページ目以降（もっと見るページ）は空を返す。
+      const results = offset > 0 ? [] : found;
+      return NextResponse.json({ results, total: found.length });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "検索に失敗しました";
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+  }
 
   try {
     const [results, total] = await Promise.all([
