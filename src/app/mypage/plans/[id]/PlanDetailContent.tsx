@@ -11,12 +11,13 @@ import {
   reorderPlanItem,
   updatePlanItemDay,
 } from "@/lib/plans";
-import { getSavedSpots } from "@/lib/storage";
+import { addSavedSpot, getSavedSpots } from "@/lib/storage";
 import { youtubeWatchUrl } from "@/lib/links";
 import { spotDisplayName, spotMapsUrl } from "@/lib/spots";
 import ShareButtons from "@/components/ShareButtons";
 import Alert from "@/components/Alert";
-import type { Plan, PlanItem, SavedSpot } from "@/lib/types";
+import PlanSpotSearch from "@/components/PlanSpotSearch";
+import type { Plan, PlanItem, SavedSpot, VideoResult } from "@/lib/types";
 
 export default function PlanDetailContent({ planId }: { planId: string }) {
   const [plan, setPlan] = useState<Plan | null>(null);
@@ -82,6 +83,27 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
     const day = addDay[spotId] ?? 1;
     try {
       await addPlanItem(planId, spotId, day);
+      await load();
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "追加に失敗しました");
+      setStatus("error");
+    }
+  }
+
+  // 検索結果から追加する。行きたいリストに未保存なら先に保存してからプランへ入れる。
+  async function handleAddVideo(video: VideoResult, day: number) {
+    try {
+      const existing = spots.find((spot) => spot.videoId === video.videoId);
+      const spot =
+        existing ??
+        (await addSavedSpot({
+          videoId: video.videoId,
+          videoTitle: video.title,
+          thumbnailUrl: video.thumbnailUrl,
+          spotName: "",
+          genre: null,
+        }));
+      await addPlanItem(planId, spot.id, day);
       await load();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "追加に失敗しました");
@@ -275,11 +297,18 @@ export default function PlanDetailContent({ planId }: { planId: string }) {
         </button>
       </div>
 
+      <PlanSpotSearch
+        dayCount={dayCount}
+        spots={spots}
+        assignedSpotIds={assignedSpotIds}
+        onAdd={handleAddVideo}
+      />
+
       <div className="rounded-2xl border border-brand-100 bg-white p-4 shadow-sm">
         <h2 className="mb-3 font-semibold text-slate-800">行きたいリストから追加</h2>
         {unassignedSpots.length === 0 ? (
           <p className="text-sm text-slate-400">
-            追加できるスポットがありません。検索画面から行きたいリストに追加してください。
+            行きたいリストから追加できるスポットがありません。
           </p>
         ) : (
           <ul className="flex flex-col gap-2">
